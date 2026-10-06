@@ -14180,9 +14180,9 @@ document.addEventListener('DOMContentLoaded', function() {
       const row = await window.reportInsightsFetchRow(BRAND, { year: String(year), month: String(month) });
       let anyVisible = false;
       [1, 2, 3, 4].forEach(n => {
-        const title    = row ? (row[`acc${n}_title`]    || '') : '';
-        const subtitle = row ? (row[`acc${n}_subtitle`] || '') : '';
-        const body     = row ? (row[`acc${n}_body`]     || '') : '';
+        const title    = row ? (row[`accomplished${n}_title`]    || '') : '';
+        const subtitle = row ? (row[`accomplished${n}_subtitle`] || '') : '';
+        const body     = row ? (row[`accomplished${n}_body`]     || '') : '';
         const card = document.getElementById(`acc-card-${n}`);
         if (title) {
           anyVisible = true;
@@ -14202,7 +14202,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (taSub)   taSub.value = subtitle;
         if (taBody)  taBody.value = body;
         if (n === 1 || n === 2) {
-          const imgUrls = [1,2,3,4,5,6].map(i => row ? (row[`acc${n}_image${i}`] || '') : '');
+          const imgUrls = [1,2,3,4,5,6].map(i => row ? (row[`accomplished${n}_image${i}`] || '') : '');
           imgUrls.forEach((url, i) => { const inp = document.getElementById(`acc${n}-image${i+1}-input`); if (inp) inp.value = url; });
           renderAccImages(`acc${n}-images-disp`, imgUrls);
         }
@@ -14223,12 +14223,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const { year, month } = getLastFullMonthLocal3();
         const fields = {};
         [1, 2, 3, 4].forEach(n => {
-          fields[`acc${n}_title`]    = (document.getElementById(`acc${n}-title-input`).value || '').trim();
-          fields[`acc${n}_subtitle`] = (document.getElementById(`acc${n}-subtitle-input`).value || '').trim();
-          fields[`acc${n}_body`]     = (document.getElementById(`acc${n}-body-input`).value || '').trim();
+          fields[`accomplished${n}_title`]    = (document.getElementById(`acc${n}-title-input`).value || '').trim();
+          fields[`accomplished${n}_subtitle`] = (document.getElementById(`acc${n}-subtitle-input`).value || '').trim();
+          fields[`accomplished${n}_body`]     = (document.getElementById(`acc${n}-body-input`).value || '').trim();
           if (n === 1 || n === 2) {
             [1,2,3,4,5,6].forEach(i => {
-              fields[`acc${n}_image${i}`] = (document.getElementById(`acc${n}-image${i}-input`).value || '').trim();
+              fields[`accomplished${n}_image${i}`] = (document.getElementById(`acc${n}-image${i}-input`).value || '').trim();
             });
           }
         });
