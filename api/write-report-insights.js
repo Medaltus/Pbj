@@ -42,7 +42,7 @@ const brands = require('./config/brands');
 // PB & Jay — EXACT physical column order of the {brand} tab, per Jaclyn
 // 2026-10-06. replaceRows() writes values POSITIONALLY under the existing
 // header row and readRows() keys by that header row, so this array must
-// match the sheet column-for-column (A..BE, 57 columns). New columns only
+// match the sheet column-for-column (A..BF, 58 columns). New columns only
 // ever get appended at the END — never inserted — or every existing row's
 // data shifts into the wrong columns on the next save.
 //
@@ -71,6 +71,7 @@ const MONTHLY_HEADERS = [
   'opp6_subtitle', 'opp6_body', 'accomplished1_image4',
   'accomplished1_image5', 'accomplished1_image6', 'accomplished2_image3',
   'accomplished2_image4', 'accomplished2_image5', 'accomplished2_image6',
+  'subscriptions_key_insight', // column BF — added to the sheet by Jaclyn 2026-10-07
 ];
 
 // acc{n}_* (older dashboards) -> accomplished{n}_* (this sheet's real columns).
