@@ -21139,7 +21139,7 @@ async function loadAuditResultsFromSheet() {
     return rows;
   }
 
-  function pdfxTableHtml(headers, rows) {
+  function pdfxTableHtml(headers, rows, maxRows) {
     if (!rows.length) {
       return '<div style="font-size:11px;color:var(--muted);font-style:italic;padding:10px 2px;">No sales data for this period.</div>';
     }
@@ -21149,7 +21149,7 @@ async function loadAuditResultsFromSheet() {
     // keeping. See pdfxCaptureAllChartImages/pdfxStretchChartToFillPage for
     // where the freed-up space is now going instead (the chart, not left
     // blank).
-    const MAX_ROWS = 8;
+    const MAX_ROWS = maxRows || 8; // Brand Momentum keyword table passes 15
     const shownRows = rows.length > MAX_ROWS ? rows.slice(0, MAX_ROWS) : rows;
     let thead = '<tr>' + headers.map(function (h, i) {
       return '<th' + (i > 1 ? ' class="num"' : '') + '>' + pdfxEscape(h) + '</th>';
@@ -22149,7 +22149,11 @@ async function loadAuditResultsFromSheet() {
   }
 
   function buildBrandMomentumPages(monthYear) {
-    const cards = Array.from(document.querySelectorAll('#bm-momentum-cards-grid .momentum-pcard'));
+    // Section checkboxes on the live page (Performance by Product / Keyword
+    // Indexing / What We're Tracking Next) now decide what goes in the PDF.
+    const _on = id => { const cb = document.getElementById(id); return !cb || cb.checked; };
+    const showProducts = _on('bm-cb-products'), showKeywords = _on('bm-cb-keywords'), showNext = _on('bm-cb-next');
+    const cards = showProducts ? Array.from(document.querySelectorAll('#bm-momentum-cards-grid .momentum-pcard')) : [];
     const FIRST_PAGE_MAX = 4, OTHER_PAGE_MAX = 5;
     const productChunks = [];
     {
@@ -22181,24 +22185,30 @@ async function loadAuditResultsFromSheet() {
     // Keyword table — same top-20 data already rendered into the live
     // #bm-keyword-tbody by initBrandMomentum, read directly rather than
     // re-querying the sheets a second time.
-    const kwRows = pdfxTableRows('bm-keyword-tbody');
+    const kwRows = showKeywords ? pdfxTableRows('bm-keyword-tbody').slice(0, 15) : []; // PDF shows 15 (dashboard shows 20)
     const kwHtml = kwRows.length
       ? '<div class="pdfx-card" style="margin-bottom:0;">' +
-          '<div class="pdfx-card-title">Targeted Keyword Indexing Progress <span style="font-weight:400;color:var(--muted);">(Top 20)</span></div>' +
-          pdfxTableHtml(['Keyword', 'Product', 'Organic Rank', 'Search Volume'], kwRows) +
+          '<div class="pdfx-card-title">Targeted Keyword Indexing Progress <span style="font-weight:400;color:var(--muted);">(Top 15)</span></div>' +
+          pdfxTableHtml(['Keyword', 'Product', 'Organic Rank', 'Search Volume'], kwRows, 15) +
         '</div>'
       : '';
 
     // "What We're Tracking Next" — same .momentum-tracking-* markup the
     // live dashboard uses, read directly via outerHTML rather than
     // rebuilt inline, so PDF and live dashboard can never drift apart.
-    const nextEl = pdfxById('bm-cb-next-section');
+    const nextEl = showNext ? pdfxById('bm-cb-next-section') : null;
     const nextHtml = nextEl ? nextEl.outerHTML : '';
 
-    const lastPage = (kwHtml || nextHtml) ? (
+    // With Performance by Product unchecked there are no card pages, so the
+    // page intro + top-3 KPIs move onto this page instead.
+    const introHtml = productChunks.length ? '' :
+      '<div class="pdfx-chlabel">Brand Momentum</div>' +
+      '<div class="pdfx-kpis n3" style="margin-top:6px;margin-bottom:14px;">' + top3Kpis.map(pdfxKpiCardHtml).join('') + '</div>';
+    const lastPage = (kwHtml || nextHtml || introHtml) ? (
       '<div class="pdfx-page">' +
         '<div class="pdfx-inner">' +
           pdfxHeaderBand(monthYear, 'Brand Momentum') +
+          introHtml +
           kwHtml +
           (nextHtml ? '<div style="margin-top:' + (kwHtml ? '22px' : '0') + ';">' + nextHtml + '</div>' : '') +
         '</div>' +
