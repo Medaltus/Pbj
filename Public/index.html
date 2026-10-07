@@ -159,6 +159,32 @@ window.pbjExcludedAdUnits = function (adOrderRows, year, month) {
     return window.pbjIsExcludedSku(r.asin) ? n + (parseInt(r.ad_units, 10) || 0) : n;
   }, 0);
 };
+window.pbjAmazonFees = function (year, month, prevYear, prevMonth) {
+  window._pbjFeesCsvPromise = window._pbjFeesCsvPromise || (async function () {
+    var c = (window.SHEET_CFG || {}).SHEET_ORDERS || {};
+    if (!c.fileId || !c.gid) return [];
+    var t = await fetch('https://docs.google.com/spreadsheets/d/' + c.fileId + '/export?format=csv&gid=' + c.gid + '&_cb=' + Date.now()).then(function (r) { return r.ok ? r.text() : ''; }).catch(function () { return ''; });
+    return t && !t.trim().startsWith('<') ? window.parseCsvKeepCase(t) : [];
+  })();
+  return window._pbjFeesCsvPromise.then(function (rows) {
+    function sum(y, m) {
+      if (!y || !m) return null;
+      var key = y + '-' + String(m).padStart(2, '0'), total = 0, n = 0;
+      rows.forEach(function (r) {
+        if (r.brand && !window.isPbjBrand(r.brand)) return;
+        if (window.pbjRowYm(r.date) !== key) return;
+        if (window.pbjIsExcludedSalesRow(r)) return;
+        var fee = r['Amazon Estimated fees'];
+        if (fee == null) { var ks = Object.keys(r); fee = r[ks[15]]; } // column P fallback
+        total += parseFloat(String(fee || '').replace(/[$,]/g, '')) || 0; n++;
+      });
+      return n ? Math.round(total * 100) / 100 : null;
+    }
+    var out = { curr: sum(year, month), prev: sum(prevYear, prevMonth) };
+    console.log('[PBJ][stewardship] Amazon fees (orders col P):', year + '-' + month, out.curr, '| prev', out.prev);
+    return out;
+  });
+};
 window.isPbjBrand = function (v) { var n = String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); return n === 'pbj' || n === 'pbjay'; };
 (function () {
   window.SHEET_CFG = {};
@@ -2282,7 +2308,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
             Hide negative BSR changes
           </label>
           <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;flex-shrink:0;margin-left:14px;">
-            <input type="checkbox" id="bm-hide-oos" checked style="margin:0;" onchange="window.bmRenderMomentumCards && window.bmRenderMomentumCards()">
+            <input type="checkbox" id="bm-hide-oos" checked style="margin:0;" onchange="window.bmRenderMomentumCards && window.bmRenderMomentumCards(); window.bmRenderKeywordTable && window.bmRenderKeywordTable()">
             Hide out-of-stock products
           </label>
         </div>
@@ -2293,8 +2319,14 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
       </div>
 
       <div id="bm-cb-keywords-section" class="ppc-card">
-        <div class="ppc-card-title">Targeted Keyword Indexing Progress</div>
-        <div style="font-size:11px;color:var(--muted);margin-top:-8px;margin-bottom:14px;">Organic rankings signal algorithm traction — new brands typically take 3–12 months to index.</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div class="ppc-card-title">Targeted Keyword Indexing Progress</div>
+          <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;flex-shrink:0;">
+            <input type="checkbox" id="bm-hide-negative-kw" style="margin:0;" onchange="window.bmRenderKeywordTable && window.bmRenderKeywordTable()">
+            Hide negative rank changes
+          </label>
+        </div>
+        <div style="font-size:11px;color:var(--muted);margin-top:-8px;margin-bottom:14px;">Organic rankings signal algorithm traction — new brands typically take 3–12 months to index. <span id="bm-kw-change-note"></span></div>
         <div style="overflow-x:auto;">
           <table class="data-table">
             <thead><tr><th>Keyword</th><th>Product</th><th>Organic Rank</th><th>Search Volume</th></tr></thead>
@@ -2327,7 +2359,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
       <div class="section-label">Key Performance Metrics</div>
       <div class="kpi-row">
         <div class="kpi-card" id="kpi-pct-revenue-invested"><div class="kpi-label">% Revenue Invested</div><div class="kpi-value">5%</div><div class="kpi-mom flat"></div></div>
-        <div class="kpi-card" id="kpi-amazon-fees"><div class="kpi-label">Amazon Fees</div><div class="kpi-value sm">$613.86</div><div class="kpi-mom flat"></div></div>
+        <div class="kpi-card" id="kpi-amazon-fees"><div class="kpi-label">Amazon Fees</div><div class="kpi-value sm">—</div><div class="kpi-mom flat"></div></div>
         <div class="kpi-card" id="kpi-pct-units-ads"><div class="kpi-label">% Units from Ads</div><div class="kpi-value">26%</div><div class="kpi-mom flat"></div></div>
         <div class="kpi-card" id="kpi-ad-clicks"><div class="kpi-label">Ad Clicks</div><div class="kpi-value">272</div><div class="kpi-mom flat">0% MOM</div></div>
         <div class="kpi-card" id="kpi-ad-impressions"><div class="kpi-label">Ad Impressions</div><div class="kpi-value">85K</div><div class="kpi-mom dn">▼ 38% MOM</div></div>
@@ -2595,7 +2627,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
       <div class="section-label">Key Performance Metrics</div>
       <div class="kpi-row">
         <div class="kpi-card" id="mx-kpi-pct-revenue-invested"><div class="kpi-label">% Revenue Invested</div><div class="kpi-value">—</div><div class="kpi-mom flat"></div></div>
-        <div class="kpi-card" id="mx-kpi-amazon-fees"><div class="kpi-label">Amazon Fees</div><div class="kpi-value sm">$613.86</div><div class="kpi-mom flat"></div></div>
+        <div class="kpi-card" id="mx-kpi-amazon-fees"><div class="kpi-label">Amazon Fees</div><div class="kpi-value sm">—</div><div class="kpi-mom flat"></div></div>
         <div class="kpi-card" id="mx-kpi-pct-units-ads"><div class="kpi-label">% Units from Ads</div><div class="kpi-value">—</div><div class="kpi-mom flat"></div></div>
         <div class="kpi-card" id="mx-kpi-ad-clicks"><div class="kpi-label">Ad Clicks</div><div class="kpi-value">—</div><div class="kpi-mom flat"></div></div>
         <div class="kpi-card" id="mx-kpi-ad-impressions"><div class="kpi-label">Ad Impressions</div><div class="kpi-value">—</div><div class="kpi-mom flat"></div></div>
@@ -7653,6 +7685,15 @@ async function initSns() {
       if (pctUnitsAdsCurr != null) setKpiVal('kpi-pct-units-ads', pctUnitsAdsCurr + '%');
       setKpiMom('kpi-pct-units-ads', pct(pctUnitsAdsCurr, pctUnitsAdsPrev));
 
+      // Amazon Fees — sum of orders sheet col P ("Amazon Estimated fees") for the month
+      try {
+        const _fees = await window.pbjAmazonFees(year, month, prevYear, prevMonth);
+        if (_fees.curr != null) {
+          setKpiVal('kpi-amazon-fees', '$' + _fees.curr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          setKpiMom('kpi-amazon-fees', pct(_fees.curr, _fees.prev));
+        } else setKpiVal('kpi-amazon-fees', '—');
+      } catch (e) { console.warn('[PBJ] Amazon fees KPI failed:', e.message); setKpiVal('kpi-amazon-fees', '—'); }
+
       // % Revenue Invested — (Ads + Vine/Promos this month) ÷ TOTAL revenue
       // across ALL channels (Amazon + Website + Walmart), not just Amazon's
       // summary-sheet revenue. Per Jaclyn 2026-07-14. Website/Walmart use
@@ -10454,6 +10495,15 @@ async function initSns() {
 
       if (pctUnitsAdsCurr != null) setKpiVal('mx-kpi-pct-units-ads', pctUnitsAdsCurr + '%');
       setKpiMom('mx-kpi-pct-units-ads', pct(pctUnitsAdsCurr, pctUnitsAdsPrev));
+
+      // Amazon Fees — sum of orders sheet col P ("Amazon Estimated fees") for the month
+      try {
+        const _fees = await window.pbjAmazonFees(year, month, prevYear, prevMonth);
+        if (_fees.curr != null) {
+          setKpiVal('mx-kpi-amazon-fees', '$' + _fees.curr.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+          setKpiMom('mx-kpi-amazon-fees', pct(_fees.curr, _fees.prev));
+        } else setKpiVal('mx-kpi-amazon-fees', '—');
+      } catch (e) { console.warn('[PBJ] Amazon fees KPI failed:', e.message); setKpiVal('mx-kpi-amazon-fees', '—'); }
 
       // % Revenue Invested — (Ads + Vine/Promos + Website Google Ads spend
       // this month) ÷ TOTAL revenue across ALL channels (Amazon + Website +
@@ -13742,11 +13792,30 @@ window.initBrandMomentum = async function () {
     let rankedKws = [];
     let kwFetchError = null;
     if (isCsv(kwPerKeywordCsv)) {
-      const rows = parseCsv(kwPerKeywordCsv).filter(r => (r.asin || '').trim());
+      const rows = parseCsv(kwPerKeywordCsv).filter(r => (r.asin || '').trim() && (r.keyword || '').trim() && /^\d{4}-\d{2}-\d{2}/.test(r.date || ''));
+      const dates = [...new Set(rows.map(r => r.date.slice(0, 10)))].sort();
+      const latestDate = dates[dates.length - 1];
+      // comparison snapshot: the tracked date closest to 28 days before the latest
+      const _d = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+      const target = latestDate ? _d(latestDate).getTime() - 28 * 86400000 : 0;
+      const prevDate = dates.filter(d => d < latestDate).sort((a, b) => Math.abs(_d(a) - target) - Math.abs(_d(b) - target))[0] || null;
+      const rankOf = r => { const n = parseInt(String(r.organic_rank || '').replace(/[^\d]/g, ''), 10); return /^\s*>/.test(r.organic_rank || '') ? null : (n > 0 ? n : null); };
+      const keyOf = r => (r.asin || '').trim().toUpperCase() + '|' + (r.keyword || '').trim().toLowerCase();
+      const prevRank = {};
+      rows.filter(r => r.date.slice(0, 10) === prevDate).forEach(r => { prevRank[keyOf(r)] = rankOf(r); });
       rankedKws = rows
-        .filter(r => { const rank = parseInt(r.organic_rank, 10); return rank > 0 && rank <= 100; })
-        .map(r => ({ kw: r.keyword || '', rank: parseInt(r.organic_rank, 10), vol: parseInt(r.search_volume, 10) || null, prod: JBJ_MOMENTUM_PRODUCTS.find(p => p.asin === (r.asin || '').trim().toUpperCase())?.name || '' }))
+        .filter(r => r.date.slice(0, 10) === latestDate)
+        .map(r => {
+          const rank = rankOf(r), asin = (r.asin || '').trim().toUpperCase();
+          const pr = prevRank[keyOf(r)];
+          return { kw: r.keyword || '', rank, vol: parseInt(r.search_volume, 10) || null, asin,
+                   prod: JBJ_MOMENTUM_PRODUCTS.find(p => p.asin === asin)?.name || '',
+                   change: (pr && rank) ? pr - rank : null, isNew: !!rank && !pr };
+        })
+        .filter(k => k.rank) // any tracked organic rank (Helium 10 tracks to ~#306) — only 4 sit inside the top 100 right now
         .sort((a, b) => a.rank - b.rank);
+      window._bmKwMeta = { latestDate, prevDate };
+      console.log('[BrandMomentum] keyword ranks', latestDate, 'vs', prevDate, '—', rankedKws.length, 'keywords with an organic rank');
     } else {
       kwFetchError = 'Could not read the per-keyword tracker tab.';
       console.warn('[BrandMomentum] Keyword Tracker (per-keyword) did not return CSV.');
@@ -13784,22 +13853,9 @@ window.initBrandMomentum = async function () {
       if (momEl) { momEl.className = 'kpi-mom ' + momCls; momEl.textContent = `${momStr} MoM`; }
     }
 
-    // ── Populate the static keyword indexing table ───────────────────────
-    const kwTbody = document.getElementById('bm-keyword-tbody');
-    if (kwTbody) {
-      if (kwFetchError) {
-        kwTbody.innerHTML = `<tr><td colspan="4" style="color:var(--navy);">${esc(kwFetchError)}</td></tr>`;
-      } else if (!rankedKws.length) {
-        kwTbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted);font-style:italic;">No keywords ranked in the top 100 found yet.</td></tr>`;
-      } else {
-        kwTbody.innerHTML = rankedKws.slice(0, 20).map(({ kw, rank, vol, prod }) => `<tr>
-          <td style="font-weight:600;">${esc(kw)}</td>
-          <td style="color:var(--muted);font-weight:400;">${esc(prod)}</td>
-          <td style="font-weight:700;">#${rank}</td>
-          <td style="color:var(--muted);font-weight:400;">${vol ? vol.toLocaleString() : '—'}</td>
-        </tr>`).join('');
-      }
-    }
+    // ── Populate the keyword indexing table (re-rendered by the checkbox) ──
+    window._bmKwState = { rankedKws, kwFetchError };
+    window.bmRenderKeywordTable();
 
     // Cache for bmRenderMomentumCards (initial render below, and every
     // "Hide negative BSR changes" toggle after this) — same reasoning as
@@ -13837,6 +13893,35 @@ window.initBrandMomentum = async function () {
 // Separate render function — matches évolis's own split exactly, so the
 // "Hide negative BSR changes" checkbox can re-render instantly from
 // window._bmCardData/window._bmBsrBySku without re-fetching anything.
+window.bmRenderKeywordTable = function () {
+  const kwTbody = document.getElementById('bm-keyword-tbody');
+  const st = window._bmKwState;
+  if (!kwTbody || !st) return;
+  const esc = v => { const d = document.createElement('div'); d.textContent = String(v == null ? '' : v); return d.innerHTML; };
+  const hideNeg = document.getElementById('bm-hide-negative-kw')?.checked;
+  const hideOos = document.getElementById('bm-hide-oos')?.checked;
+  if (st.kwFetchError) { kwTbody.innerHTML = `<tr><td colspan="4" style="color:var(--navy);">${esc(st.kwFetchError)}</td></tr>`; return; }
+  const list = st.rankedKws.filter(k => !(hideOos && window._bmOosAsins && window._bmOosAsins.has(k.asin)));
+  if (!list.length) { kwTbody.innerHTML = `<tr><td colspan="4" style="color:var(--muted);font-style:italic;">No keywords with an organic rank found yet.</td></tr>`; return; }
+  const pill = k => {
+    if (k.isNew) return '<span class="tp-mom-up">▲ New</span>';
+    if (k.change > 0) return `<span class="tp-mom-up">▲ ${k.change}</span>`;
+    if (k.change < 0) return hideNeg ? '' : `<span class="tp-mom-dn">▼ ${Math.abs(k.change)}</span>`;
+    return k.change === 0 ? '<span class="tp-mom-flat">—</span>' : '';
+  };
+  kwTbody.innerHTML = list.slice(0, 20).map(k => `<tr>
+    <td style="font-weight:600;">${esc(k.kw)}</td>
+    <td style="color:var(--muted);font-weight:400;">${esc(k.prod)}</td>
+    <td style="font-weight:700;"><div class="tp-cell"><span class="tp-units">#${k.rank}</span>${pill(k)}</div></td>
+    <td style="color:var(--muted);font-weight:400;">${k.vol ? k.vol.toLocaleString() : '—'}</td>
+  </tr>`).join('');
+  const m = window._bmKwMeta || {};
+  const note = document.getElementById('bm-kw-change-note');
+  if (note && m.prevDate) {
+    const f = d => { const [y, mo, dd] = d.split('-').map(Number); return new Date(y, mo - 1, dd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+    note.textContent = `Rank change compares ${f(m.latestDate)} to ${f(m.prevDate)} (▲ = moved up).`;
+  }
+};
 window.bmRenderMomentumCards = function () {
   const grid = document.getElementById('bm-momentum-cards-grid');
   if (!grid || !window._bmCardData) return;
