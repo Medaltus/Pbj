@@ -65,8 +65,8 @@ window.parseCsvKeepCase = function (text) {
   var h = rows[0].map(function (x) { return x.trim(); });
   return rows.slice(1).map(function (r) { var o = {}; h.forEach(function (k, j) { o[k] = (r[j] || '').trim(); }); return o; });
 };
-// ── Makeup Wipes removed from Sales data (Jaclyn 2026-10-07): expired SKUs
-// that were still sold by accident. Matched by SKU (with -SF stripped) or
+// ── Makeup Wipes removed from Sales data from Aug 2026 on (Jaclyn 2026-10-07):
+// expired SKUs that were still sold by accident. Matched by SKU (with -SF stripped) or
 // ASIN; a row is excluded only when EVERY SKU/ASIN on it is a wipe.
 window.PBJ_SALES_EXCLUDED_SKUS = new Set(["PBJ0001", "PBJ0002", "PBJ0003", "PBJ0004", "PBJ0005", "PBJ0006", "PBJ0007", "PBJ0008", "PBJ0009", "PBJ0010", "PBJ0011", "PBJ0012"]);
 window.PBJ_SALES_EXCLUDED_ASINS = new Set(["B0G5478FBN", "B0G547NZ9J", "B0G54BCND2", "B0G547943S", "B0G547F78D", "B0G547TH1D", "B0G54BDBXF", "B0G547LV5T", "B0G54B8CLD", "B0G548M3BZ", "B0G547M1RV", "B0G54BH9DH"]);
@@ -74,8 +74,21 @@ window.pbjIsExcludedSku = function (v) {
   var t = String(v || '').trim().toUpperCase().replace(/-SF$/, '');
   return window.PBJ_SALES_EXCLUDED_SKUS.has(t) || window.PBJ_SALES_EXCLUDED_ASINS.has(t);
 };
+// Only orders/returns dated on or after this month are removed — earlier
+// months keep the wipes (they were live products then). Per Jaclyn
+// 2026-10-07: the wipes expired going into August; sales from Aug 2026 on
+// went through by accident.
+window.PBJ_SALES_EXCLUDE_FROM = '2026-08';
+window.pbjRowYm = function (v) {
+  var d = String(v || '').trim(), m = d.match(/^(\d{4})-(\d{2})/);
+  if (m) return m[1] + '-' + m[2];
+  m = d.match(/^(\d{1,2})\/\d{1,2}\/(\d{4})/);
+  return m ? m[2] + '-' + String(m[1]).padStart(2, '0') : '';
+};
 window.pbjIsExcludedSalesRow = function (r) {
   if (!r) return false;
+  var ym = window.pbjRowYm(r.date || r.return_date || r.purchase_date);
+  if (!ym || ym < window.PBJ_SALES_EXCLUDE_FROM) return false;
   var toks = [r.sku, r.skus, r.asin].filter(Boolean).join(',').split(',').map(function (x) { return x.trim(); }).filter(Boolean);
   return toks.length > 0 && toks.every(window.pbjIsExcludedSku);
 };
@@ -13957,7 +13970,7 @@ window.initSalesInsights = async function () {
       const skuList = (r.skus || '').split(',').map(s => s.trim().toUpperCase().replace(/-SF$/i, '')).filter(Boolean);
       if (!skuList.length) return;
       skuList.forEach(sku => {
-        if (window.pbjIsExcludedSku(sku)) return; // Makeup Wipes removed from Sales data (2026-10-07)
+        if (window.pbjIsExcludedSku(sku) && monthKey >= window.PBJ_SALES_EXCLUDE_FROM) return; // Makeup Wipes removed from Aug 2026 on only (2026-10-07)
         const category = skuToCategory[sku];
         if (!category) return; // not a known PB & Jay SKU (or column K not assigned yet)
         if (!byMonth[monthKey]) byMonth[monthKey] = {};
