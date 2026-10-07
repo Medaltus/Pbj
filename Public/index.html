@@ -151,6 +151,14 @@ window.pbjGetOosAsins = function () {
   })();
   return window._pbjOosPromise;
 };
+window.pbjExcludedAdUnits = function (adOrderRows, year, month) {
+  var ym = year + '-' + String(month).padStart(2, '0');
+  if (ym < window.PBJ_SALES_EXCLUDE_FROM) return 0;
+  return (adOrderRows || []).reduce(function (n, r) {
+    if (parseInt(r.year, 10) !== +year || parseInt(r.month, 10) !== +month) return n;
+    return window.pbjIsExcludedSku(r.asin) ? n + (parseInt(r.ad_units, 10) || 0) : n;
+  }, 0);
+};
 window.isPbjBrand = function (v) { var n = String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); return n === 'pbj' || n === 'pbjay'; };
 (function () {
   window.SHEET_CFG = {};
@@ -1206,7 +1214,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 .pdfx-cover-col p{margin-bottom:12px;}
 
 /* Interior page header band */
-.pdfx-inner{padding:34px 46px 40px;}
+.pdfx-inner{padding:34px 46px 14px;}
 .pdfx-topband{display:block;background:var(--navy);margin:-34px -46px 0 -46px;padding:24px 46px 0;}
 .pdfx-logo-navy{font-family:Georgia,'Times New Roman',serif;font-size:19px;font-style:italic;color:var(--navy);}
 .pdfx-tagright{text-align:right;}
@@ -1226,6 +1234,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 .pdfx-kpi{border:1px solid var(--border);border-radius:0;padding:20px 16px;background:#fbfbfd;margin-left:-1px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;}
 .pdfx-kpi:first-child{margin-left:0;}
 .pdfx-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:9px;white-space:nowrap;}
+.sc-value,.evs-badge-pct,.org-p1-rank-num,.oos-sku-summary-stat .n,.pdfx-table td.num{font-family:var(--font-subheader);}
 .pdfx-kpi-val{font-size:29px;font-weight:700;font-family:var(--font-subheader);color:var(--navy);letter-spacing:-.5px;line-height:1;}
 .pdfx-kpi-mom{font-size:13px;margin-top:6px;font-weight:400;font-family:var(--font-body-light);min-height:16px;}
 .pdfx-kpi-mom.up{color:var(--green);}
@@ -6495,10 +6504,10 @@ async function initSns() {
     let adUnitsKpi = 0, prevAdUnitsKpi = 0;
     if (_amzAdRows.length) {
       const adRow = _amzAdRows.find(r => parseInt(r.year, 10) === cfg.year && parseInt(r.month, 10) === cfg.month);
-      if (adRow) adUnitsKpi = parseInt(adRow.ad_units, 10) || 0;
+      if (adRow) adUnitsKpi = Math.max(0, (parseInt(adRow.ad_units, 10) || 0) - window.pbjExcludedAdUnits(_amzAdOrderRows, cfg.year, cfg.month));
       if (prevAgg && cfg.prevYear) {
         const prevAdRow = _amzAdRows.find(r => parseInt(r.year, 10) === cfg.prevYear && parseInt(r.month, 10) === cfg.prevMonth);
-        if (prevAdRow) prevAdUnitsKpi = parseInt(prevAdRow.ad_units, 10) || 0;
+        if (prevAdRow) prevAdUnitsKpi = Math.max(0, (parseInt(prevAdRow.ad_units, 10) || 0) - window.pbjExcludedAdUnits(_amzAdOrderRows, cfg.prevYear, cfg.prevMonth));
       }
     }
 
@@ -8595,9 +8604,10 @@ async function initSns() {
       if (isCsv(adSummaryCsv)) {
         const adRows = parseCsv(adSummaryCsv);
         const adRow  = adRows.find(r => parseInt(r.year, 10) === year && parseInt(r.month, 10) === month);
-        if (adRow) adUnitsKpi = parseInt(adRow.ad_units, 10) || 0;
+        const _allAdOrders = isCsv(adOrdersCsv) ? parseCsv(adOrdersCsv) : [];
+        if (adRow) adUnitsKpi = Math.max(0, (parseInt(adRow.ad_units, 10) || 0) - window.pbjExcludedAdUnits(_allAdOrders, year, month));
         const prevAdRow = adRows.find(r => parseInt(r.year, 10) === prevYear && parseInt(r.month, 10) === prevMonth);
-        if (prevAdRow) prevAdUnitsKpi = parseInt(prevAdRow.ad_units, 10) || 0;
+        if (prevAdRow) prevAdUnitsKpi = Math.max(0, (parseInt(prevAdRow.ad_units, 10) || 0) - window.pbjExcludedAdUnits(_allAdOrders, prevYear, prevMonth));
       }
 
       // Parse ad orders — ASIN-level for top products table
@@ -21676,8 +21686,8 @@ async function loadAuditResultsFromSheet() {
       // customSubValue combination on some other page ends up taller
       // than today's cases — the row simply can't shrink below 80px
       // regardless of what text is next to the logo.
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;min-height:80px;">' +
-        '<span class="pdfx-logo-navy" style="display:inline-block;">' + pdfxLogoHtml('height:80px;width:auto;filter:brightness(0) invert(1);') + '</span>' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;min-height:53px;">' +
+        '<span class="pdfx-logo-navy" style="display:inline-block;line-height:0;">' + pdfxLogoHtml('height:53px;width:auto;margin-left:-17px;display:block;filter:brightness(0) invert(1);') + '</span>' +
         '<div class="pdfx-tagright">' + tagHtml + '</div>' +
       '</div>' +
       '<div class="pdfx-tabs">' + tabsHtml + '</div>' +
@@ -21709,7 +21719,7 @@ async function loadAuditResultsFromSheet() {
         '<div class="pdfx-cover-navy">' +
           (PDFX_WATERMARK_SRC ? '<img src="' + PDFX_WATERMARK_SRC + '" alt="" style="position:absolute;right:-60px;top:-30px;width:640px;height:auto;opacity:0.16;pointer-events:none;">' : '') +
           '<div class="pdfx-cover-toprow">' +
-            '<span class="pdfx-logo-white" style="display:inline-block;">' + pdfxLogoHtml('height:96px;width:auto;filter:brightness(0) invert(1);') + '</span>' +
+            '<span class="pdfx-logo-white" style="display:inline-block;">' + pdfxLogoHtml('height:64px;width:auto;margin-left:-20px;display:block;filter:brightness(0) invert(1);') + '</span>' +
             '<div class="pdfx-hdr-right"><div class="pdfx-hdr-tag">Brand Performance Report</div><div class="pdfx-hdr-month">' + pdfxEscape(monthYear) + '</div></div>' +
           '</div>' +
           '<div class="pdfx-cover-eyebrow">Monthly Overview</div>' +
@@ -21864,7 +21874,7 @@ async function loadAuditResultsFromSheet() {
     // Same pill-badge + headline pattern as Executive Summary on the cover
     // page (.pdfx-pill / .pdfx-cover-cols), so the two sections match
     // exactly as designed on the live dashboard. Per Jaclyn 2026-07-14.
-    return '<div class="pdfx-card" style="margin-top:0;">' +
+    return '<div style="margin:0;">' +
       '<span class="pdfx-pill" style="margin-bottom:12px;">Future Opportunities</span>' +
       '<div class="pdfx-cover-cols" style="gap:24px;">' + cards + '</div>' +
       '</div>';
@@ -21895,7 +21905,7 @@ async function loadAuditResultsFromSheet() {
         '</div>';
     }).join('');
     if (!cards) return '';
-    return '<div class="pdfx-card" style="margin-top:0;margin-bottom:22px;">' +
+    return '<div style="margin:6px 0 0;">' +
       '<span class="pdfx-pill pdfx-pill-sand" style="margin-bottom:12px;">What&rsquo;s Been Accomplished</span>' +
       '<div class="pdfx-cover-cols" style="gap:24px;">' + cards + '</div>' +
       '</div>';
@@ -22049,7 +22059,6 @@ async function loadAuditResultsFromSheet() {
             pdfxChartBlock('_snsChart') +
           '</div>' +
           (keyInsight ? '<div class="pdfx-card" style="margin-bottom:0;"><div class="pdfx-card-title">Key Insight</div><div class="pdfx-insight">' + pdfxEscape(keyInsight) + '</div></div>' : '') +
-          pdfxFooter(monthYear) +
         '</div>' +
       '</div>';
   }
@@ -22126,8 +22135,10 @@ async function loadAuditResultsFromSheet() {
       '<div class="pdfx-page">' +
         '<div class="pdfx-inner" style="padding:22px 46px 26px;">' +
           pdfxHeaderBand(monthYear, 'Opportunities') +
-          pdfxAccomplishedBlock() +
-          pdfxFutureOpportunitiesBlock() +
+          (function () {
+            const acc = pdfxAccomplishedBlock(), opp = pdfxFutureOpportunitiesBlock();
+            return acc + (acc && opp ? '<div style="height:1px;background:#d5d9e0;margin:20px 0;"></div>' : '') + opp;
+          })() +
           pdfxFooter(monthYear, true) +
         '</div>' +
       '</div>';
@@ -22354,6 +22365,17 @@ async function loadAuditResultsFromSheet() {
   let pdfxGeorgiaAliasCss = null;
   async function pdfxGetGeorgiaAliasCss() {
     if (pdfxGeorgiaAliasCss !== null) return pdfxGeorgiaAliasCss;
+    try {
+      const u = f => new URL('/' + encodeURIComponent(f), location.origin).href;
+      const probe = await fetch(u('Georgia.ttf'), { method: 'HEAD', cache: 'no-store' }).catch(() => null);
+      if (probe && probe.ok) {
+        const faces = [['Georgia.ttf', 400, 'normal'], ['Georgia Bold.ttf', 700, 'normal'], ['Georgia Italic.ttf', 400, 'italic'], ['Georgia Bold Italic.ttf', 700, 'italic']];
+        pdfxGeorgiaAliasCss = faces.map(([f, w, st]) => "@font-face{font-family:'Georgia';src:url('" + u(f) + "') format('truetype');font-weight:" + w + ";font-style:" + st + ";font-display:block;}").join('');
+        console.log('[pdf-export] using real Georgia font files from Public/');
+        return pdfxGeorgiaAliasCss;
+      }
+      console.warn('[pdf-export] Georgia.ttf not found in Public/ — PDF falls back to Gelasio (Georgia look-alike).');
+    } catch (e) { /* fall through to Gelasio */ }
     try {
       const res = await fetch(PDFX_GEORGIA_SUBSTITUTE_CSS);
       const css = res.ok ? await res.text() : '';
