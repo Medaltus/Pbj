@@ -9926,7 +9926,8 @@ async function initSns() {
     out.push(cur);
     return out;
   }
-  function parseCsv(text) {
+  function parseCsv(text) { return window.parseCsvKeepCase(text); } // quote-aware: multi-paragraph cells (2026-10-07)
+  function parseCsvLineSplitUnused(text) {
     const lines = text.trim().split('\n');
     const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim());
     const rows = [];
@@ -12393,7 +12394,8 @@ async function initSnsExternal() {
     out.push(cur);
     return out;
   }
-  function parseCsv(text) {
+  function parseCsv(text) { return window.parseCsvKeepCase(text); } // quote-aware: multi-paragraph cells (2026-10-07)
+  function parseCsvLineSplitUnused(text) {
     const lines = text.trim().split('\n');
     const headers = parseCsvLine(lines[0]).map(h => h.replace(/^"|"$/g,'').trim());
     const rows = [];
