@@ -185,6 +185,16 @@ window.pbjAmazonFees = function (year, month, prevYear, prevMonth) {
     return out;
   });
 };
+window.pbjFmtEventRange = function (startRaw, endRaw) {
+  var d = function (v) { var m = String(v || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(+m[1], +m[2] - 1, +m[3]) : null; };
+  var sd = d(startRaw), ed = d(endRaw) || sd;
+  if (!sd) return '';
+  var M = function (x) { return x.toLocaleDateString('en-US', { month: 'long' }); };
+  if (sd.getFullYear() !== ed.getFullYear()) return M(sd) + ' ' + sd.getDate() + ', ' + sd.getFullYear() + ' – ' + M(ed) + ' ' + ed.getDate() + ', ' + ed.getFullYear();
+  if (sd.getMonth() !== ed.getMonth()) return M(sd) + ' ' + sd.getDate() + ' – ' + M(ed) + ' ' + ed.getDate() + ', ' + ed.getFullYear();
+  if (sd.getDate() !== ed.getDate()) return M(sd) + ' ' + sd.getDate() + ' – ' + ed.getDate() + ', ' + ed.getFullYear();
+  return M(sd) + ' ' + sd.getDate() + ', ' + sd.getFullYear();
+};
 window.isPbjBrand = function (v) { var n = String(v || '').toLowerCase().replace(/[^a-z0-9]/g, ''); return n === 'pbj' || n === 'pbjay'; };
 (function () {
   window.SHEET_CFG = {};
@@ -2943,10 +2953,7 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
         </div>
       </div>
 
-      <div class="evs-outlook">
-        <div class="evs-outlook-lbl">Strategic Outlook</div>
-        <div class="evs-outlook-text">Promotional events are the highest-traffic sales windows of the year on Amazon. The brands that win invest in the 2–3 weeks prior and capitalize in the week after. <strong>Preparation, real-time agility, and disciplined follow-through are the three variables we control.</strong></div>
-      </div>
+      <!-- Strategic Outlook card removed per Jaclyn 2026-10-08 -->
     </div>
 
     <div class="channel-page" id="ev-spring">
@@ -13029,6 +13036,7 @@ async function initSnsExternal() {
         ]);
 
         const dateEl = document.getElementById('pd-event-dates');
+        window._pbjEventDates_pd = dates.current; // PDF header uses the most recent occurrence
         if (dates.current) {
           if (dateEl) dateEl.innerHTML = eventDatesHtml(dates.current, dates.previous);
         } else if (dateEl) {
@@ -13558,6 +13566,7 @@ window.initEventStrategyHeader = async function () {
           ]);
 
           const dateEl = document.getElementById(`${cfg.prefix}-event-dates`);
+          window['_pbjEventDates_' + cfg.prefix] = dates.current; // PDF header uses the most recent occurrence
           if (dates.current) {
             if (dateEl) dateEl.innerHTML = eventDatesHtml(dates.current, dates.previous);
           } else if (dateEl) {
@@ -22315,6 +22324,7 @@ async function loadAuditResultsFromSheet() {
       pdfxHeaderBand(monthYear, 'Events', pdfxText('#evs-headline'), pdfxText('#evs-dates')) +
       '<div class="pdfx-chlabel">Event Strategy</div>' +
       leadUp + during + leadOut +
+      pdfxFooter(monthYear) +
       '</div></div>';
     return page1;
   }
@@ -22346,19 +22356,28 @@ async function loadAuditResultsFromSheet() {
             .map(pdfxKpiCardHtml).join('') +
         '</div>'
       : '';
+    // Year legend (2025 / 2026) — the live page draws it as HTML next to the
+    // chart, so it never made it into the chart image the PDF uses.
+    const legendEl = pdfxById(prefix + '-legend');
+    const legendHtml = legendEl ? '<div style="display:flex;gap:16px;justify-content:flex-end;font-size:10.5px;color:var(--navy);margin:-4px 0 8px;">' +
+      Array.prototype.map.call(legendEl.querySelectorAll('span'), function (sp) {
+        const sw = sp.querySelector('i'); const col = sw ? sw.style.background : '#8a94a6';
+        return '<span style="display:inline-flex;align-items:center;gap:6px;"><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:' + col + ';"></span>' + pdfxEscape(sp.textContent.trim()) + '</span>';
+      }).join('') + '</div>' : '';
     const chartHtml = hasKpis
-      ? '<div class="pdfx-card" style="margin-top:14px;"><div class="pdfx-card-title">Top Sellers — Units Sold</div>' + pdfxChartBlock('_' + prefix + 'TopSellersChart') + '</div>'
+      ? '<div class="pdfx-card" style="margin-top:14px;"><div class="pdfx-card-title">Top Sellers — Units Sold</div>' + legendHtml + pdfxChartBlock('_' + prefix + 'TopSellersChart') + '</div>'
       : '';
+    const _ed = window['_pbjEventDates_' + prefix];
+    const headerDates = _ed ? window.pbjFmtEventRange(_ed.start_date, _ed.end_date) : '';
 
     return '' +
       '<div class="pdfx-page">' +
         '<div class="pdfx-inner">' +
-          pdfxHeaderBand(monthYear, 'Events') +
+          pdfxHeaderBand(monthYear, 'Events', 'Amazon ' + eventLabel, headerDates || null) +
           '<div class="pdfx-chlabel">' + pdfxEscape(eventLabel) + '</div>' +
           datesHtml +
           '<div class="pdfx-card"><div class="pdfx-card-title">' + pdfxEscape(headline) + '</div><div style="font-size:11.5px;color:#48557a;line-height:1.6;">' + body + '</div></div>' +
           kpisHtml + chartHtml +
-          pdfxFooter(monthYear) +
         '</div>' +
       '</div>';
   }
@@ -24098,7 +24117,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
                   <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;">${label}</div>
                   <div style="position:relative;display:inline-block;">
                     ${buildGaugeSvg(actualPct, color, null, null, null, null, 'butt')}
-                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;font-weight:700;color:var(--navy);">${actualPct}%</div>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-subheader);font-size:20px;font-weight:700;color:var(--navy);">${actualPct}%</div>
                   </div>
                   <div style="font-size:14px;font-weight:700;color:var(--navy);margin-top:8px;">${resultLine}</div>
                   ${cancelNote}
@@ -24132,7 +24151,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
                 return `<div style="text-align:center;flex:0 0 auto;min-width:220px;">${head}
                   <div style="position:relative;width:${size}px;height:${size}px;margin:0 auto;">
                     ${buildGaugeSvg(actualPct, color, '#ffffff', size, stroke, fill)}
-                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;color:${color};">${actualPct}%</div>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-subheader);font-size:38px;font-weight:700;color:${color};">${actualPct}%</div>
                   </div>
                   <div style="font-size:15px;font-weight:600;color:${color};margin-top:12px;">${statusText}</div>
                   <div style="font-size:15px;color:var(--navy);margin-top:2px;">Goal <strong>${fmtD(goal)}</strong></div>
