@@ -13483,6 +13483,7 @@ window.initEventStrategyHeader = async function () {
         ctx.font = `700 ${10 * s}px 'Montserrat', sans-serif`;
         ctx.textAlign = 'left';
         entries.forEach((e, i) => {
+          if (!e.prev) return; // no prior-year data — no YOY label
           const p = pct(e.curr, e.prev);
           const label = `${p > 0 ? '+' : ''}${p}%`;
           const isGood = p >= 0;
@@ -13529,7 +13530,7 @@ window.initEventStrategyHeader = async function () {
             callbacks: {
               afterBody: (items) => {
                 const e = entries[items[0].dataIndex];
-                return [`YOY: ${pct(e.curr, e.prev) > 0 ? '+' : ''}${pct(e.curr, e.prev)}%`];
+                return [e.prev ? `YOY: ${pct(e.curr, e.prev) > 0 ? '+' : ''}${pct(e.curr, e.prev)}%` : 'YOY: — (no prior-year data)'];
               }
             }
           }
@@ -13569,8 +13570,9 @@ window.initEventStrategyHeader = async function () {
             return;
           }
 
-          const allOrderRows = parseCsv(ordersCsv);
-          const allAdRows    = isCsv(adOrdersCsv) ? parseCsv(adOrdersCsv) : [];
+          const _dropWipes = cfg.prefix === 'pbdd'; // TEMP — Makeup Wipes removed from the PBDD report only
+          const allOrderRows = parseCsv(ordersCsv).filter(r => !(_dropWipes && window.pbjIsExcludedSalesRow(r)));
+          const allAdRows    = (isCsv(adOrdersCsv) ? parseCsv(adOrdersCsv) : []).filter(r => !(_dropWipes && window.pbjIsExcludedSku(r.asin)));
           const currYear = dates.current.start_date.slice(0,4);
           const prevYear = dates.previous ? dates.previous.start_date.slice(0,4) : null;
 
@@ -13583,21 +13585,21 @@ window.initEventStrategyHeader = async function () {
           const fmt2 = n => parseFloat(n ?? 0).toFixed(2);
 
           setKpiValue(`${cfg.prefix}-kpi-total-units`, fmt(curr.totalUnits));
-          setBadge(`${cfg.prefix}-kpi-total-units`, prev ? pct(curr.totalUnits, prev.totalUnits) : null);
+          setBadge(`${cfg.prefix}-kpi-total-units`, prev && prev.totalUnits ? pct(curr.totalUnits, prev.totalUnits) : null);
 
           setKpiValue(`${cfg.prefix}-kpi-total-orders`, fmt(curr.totalOrders));
-          setBadge(`${cfg.prefix}-kpi-total-orders`, prev ? pct(curr.totalOrders, prev.totalOrders) : null);
+          setBadge(`${cfg.prefix}-kpi-total-orders`, prev && prev.totalOrders ? pct(curr.totalOrders, prev.totalOrders) : null);
 
           setKpiValue(`${cfg.prefix}-kpi-avg-order`, '$' + fmt2(curr.avgOrder));
-          setBadge(`${cfg.prefix}-kpi-avg-order`, prev ? pct(Math.round(curr.avgOrder * 100), Math.round(prev.avgOrder * 100)) : null);
+          setBadge(`${cfg.prefix}-kpi-avg-order`, prev && prev.avgOrder ? pct(Math.round(curr.avgOrder * 100), Math.round(prev.avgOrder * 100)) : null);
 
           setKpiValue(`${cfg.prefix}-kpi-units-ads`, fmt(adUnits));
-          setBadge(`${cfg.prefix}-kpi-units-ads`, prev ? pct(adUnits, prevAdUnits) : null);
+          setBadge(`${cfg.prefix}-kpi-units-ads`, prev && prevAdUnits ? pct(adUnits, prevAdUnits) : null);
 
           const organicUnits = curr.totalUnits - adUnits;
           const prevOrganic  = prev ? prev.totalUnits - prevAdUnits : null;
           setKpiValue(`${cfg.prefix}-kpi-units-organic`, fmt(organicUnits));
-          setBadge(`${cfg.prefix}-kpi-units-organic`, prevOrganic != null ? pct(organicUnits, prevOrganic) : null);
+          setBadge(`${cfg.prefix}-kpi-units-organic`, prevOrganic ? pct(organicUnits, prevOrganic) : null);
 
           buildTopSellersChart(cfg.prefix, cfg.eventName, currYear, prevYear, curr.rows, prev ? prev.rows : [], nameMap);
 
