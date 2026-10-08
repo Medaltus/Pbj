@@ -1256,6 +1256,8 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 .pdfx-tagright{text-align:right;}
 .pdfx-tagright .pdfx-hdr-tag{color:rgba(255,255,255,.55);}
 .pdfx-tagright .pdfx-hdr-month{color:#fff;font-size:15px;}
+.pdfx-tagright .pdfx-hdr-event{font-size:17px;margin-top:4px;}
+.pdfx-tagright .pdfx-hdr-dates{font-family:var(--font);font-size:11px;color:rgba(255,255,255,.6);margin-top:5px;letter-spacing:.01em;}
 .pdfx-tabs{display:flex;gap:16px;flex-wrap:nowrap;white-space:nowrap;}
 .pdfx-tab{font-size:12px;font-weight:600;color:rgba(255,255,255,.55);padding-bottom:12px;border-bottom:3px solid transparent;}
 .pdfx-tab.on{color:#fff;border-bottom-color:var(--green);}
@@ -12985,13 +12987,14 @@ async function initSnsExternal() {
     const ctx = document.getElementById('pd-chart-top-sellers');
     if (!ctx) return;
     if (window._pdTopSellersChart) window._pdTopSellersChart.destroy();
+    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(160, 40 + entries.length * 72) + 'px'; // scales with product count
     window._pdTopSellersChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: entries.map(e => e.name),
         datasets: [
-          { label: 'Prime Day 2025', data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3 },
-          { label: 'Prime Day 2026', data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3 },
+          { label: 'Prime Day 2025', data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 14 },
+          { label: 'Prime Day 2026', data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 14 },
         ],
       },
       plugins: [yoyLabelPlugin],
@@ -13517,13 +13520,14 @@ window.initEventStrategyHeader = async function () {
     if (!ctx) return;
     const chartRef = `_${prefix}TopSellersChart`;
     if (window[chartRef]) window[chartRef].destroy();
+    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(160, 40 + entries.length * 72) + 'px'; // scales with product count
     window[chartRef] = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: entries.map(e => e.name),
         datasets: [
-          { label: `${eventLabel} ${prevYear}`, data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3 },
-          { label: `${eventLabel} ${currYear}`, data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3 },
+          { label: `${eventLabel} ${prevYear}`, data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 14 },
+          { label: `${eventLabel} ${currYear}`, data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 14 },
         ],
       },
       plugins: [yoyLabelPlugin],
@@ -21771,7 +21775,9 @@ async function loadAuditResultsFromSheet() {
     // call sites, so this falls straight through to the original
     // "Brand Performance Report" / monthYear behavior.
     const tagHtml = customValue
-      ? '<div class="pdfx-hdr-tag">' + pdfxEscape(customValue) + '</div>' + (customSubValue ? '<div class="pdfx-hdr-month" style="font-size:11px;">' + pdfxEscape(customSubValue) + '</div>' : '')
+      ? '<div class="pdfx-hdr-tag">Brand Performance Report</div>' +
+        '<div class="pdfx-hdr-month pdfx-hdr-event">' + pdfxEscape(customValue) + '</div>' +
+        (customSubValue ? '<div class="pdfx-hdr-dates">' + pdfxEscape(customSubValue) + '</div>' : '')
       : '<div class="pdfx-hdr-tag">Brand Performance Report</div><div class="pdfx-hdr-month">' + pdfxEscape(monthYear) + '</div>';
     return '<div class="pdfx-topband">' +
       // min-height:80px added 2026-09-17 — makes explicit what was
@@ -22373,7 +22379,7 @@ async function loadAuditResultsFromSheet() {
     return '' +
       '<div class="pdfx-page">' +
         '<div class="pdfx-inner">' +
-          pdfxHeaderBand(monthYear, 'Events', 'Amazon ' + eventLabel, headerDates || null) +
+          pdfxHeaderBand(monthYear, 'Events', eventLabel, headerDates || null) +
           '<div class="pdfx-chlabel">' + pdfxEscape(eventLabel) + '</div>' +
           datesHtml +
           '<div class="pdfx-card"><div class="pdfx-card-title">' + pdfxEscape(headline) + '</div><div style="font-size:11.5px;color:#48557a;line-height:1.6;">' + body + '</div></div>' +
@@ -24117,7 +24123,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
                   <div style="font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;">${label}</div>
                   <div style="position:relative;display:inline-block;">
                     ${buildGaugeSvg(actualPct, color, null, null, null, null, 'butt')}
-                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--font-subheader);font-size:20px;font-weight:700;color:var(--navy);">${actualPct}%</div>
+                    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;font-weight:700;color:var(--navy);">${actualPct}%</div>
                   </div>
                   <div style="font-size:14px;font-weight:700;color:var(--navy);margin-top:8px;">${resultLine}</div>
                   ${cancelNote}
@@ -24151,7 +24157,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
                 return `<div style="text-align:center;flex:0 0 auto;min-width:220px;">${head}
                   <div style="position:relative;width:${size}px;height:${size}px;margin:0 auto;">
                     ${buildGaugeSvg(actualPct, color, '#ffffff', size, stroke, fill)}
-                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--font-subheader);font-size:38px;font-weight:700;color:${color};">${actualPct}%</div>
+                    <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:38px;font-weight:700;color:${color};">${actualPct}%</div>
                   </div>
                   <div style="font-size:15px;font-weight:600;color:${color};margin-top:12px;">${statusText}</div>
                   <div style="font-size:15px;color:var(--navy);margin-top:2px;">Goal <strong>${fmtD(goal)}</strong></div>
