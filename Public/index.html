@@ -1272,7 +1272,6 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 .pdfx-kpi{border:1px solid var(--border);border-radius:0;padding:20px 16px;background:#fbfbfd;margin-left:-1px;display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;}
 .pdfx-kpi:first-child{margin-left:0;}
 .pdfx-kpi-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.02em;margin-bottom:9px;white-space:nowrap;}
-.sc-value,.evs-badge-pct,.org-p1-rank-num,.oos-sku-summary-stat .n,.pdfx-table td.num{font-family:var(--font-subheader);}
 .pdfx-kpi-val{font-size:29px;font-weight:700;font-family:var(--font-subheader);color:var(--navy);letter-spacing:-.5px;line-height:1;}
 .pdfx-kpi-mom{font-size:13px;margin-top:6px;font-weight:400;font-family:var(--font-body-light);min-height:16px;}
 .pdfx-kpi-mom.up{color:var(--green);}
@@ -4279,43 +4278,30 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
       </div>
     </div>
 
-    <!-- PB & Jay: one SKU sub-tab per Amazon catalog SKU (32), ordered by category. -->
-    <div class="channel-page active" id="la-products">
-      <div class="insight-grid" id="la-insights-products"><div style="color:var(--muted);font-size:12px;padding:12px;">Loading insights…</div></div>
+    <!-- PB & Jay: category tabs (Makeup Wipes / Face Masks / Hydrogel Mask / Blemish Patches / Bundles), SKU sub-tabs inside each. -->
+    <div class="insight-grid" id="la-insights-products"><div style="color:var(--muted);font-size:12px;padding:12px;">Loading insights…</div></div>
+    <div class="channel-tabs">
+      <button class="ch-tab active" onclick="showChannel('listing','la-cat-makeup-wipes',this)">Makeup Wipes</button>
+      <button class="ch-tab" onclick="showChannel('listing','la-cat-face-masks',this)">Face Masks</button>
+      <button class="ch-tab" onclick="showChannel('listing','la-cat-hydrogel-mask',this)">Hydrogel Mask</button>
+      <button class="ch-tab" onclick="showChannel('listing','la-cat-blemish-patches',this)">Blemish Patches</button>
+      <button class="ch-tab" onclick="showChannel('listing','la-products',this)">Bundles</button>
+    </div>
+
+    <div class="channel-page active" id="la-cat-makeup-wipes">
       <div class="sub-tabs" style="flex-wrap:wrap;">
-        <button class="sub-tab active" onclick="showSubTab('la-products','la-pbj0001',this)">Cleancare Cleansing Wipes (Apricot) (PBJ0001)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0002',this)">Cleancare Cleansing Wipes (Honey) (PBJ0002)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0003',this)">Cleancare Cleansing Wipes (Cucumber) (PBJ0003)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0004',this)">Cleancare Cleansing Wipes (Pomegranate) (PBJ0004)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0005',this)">Cleancare Cleansing Wipes (Green Tea) (PBJ0005)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0006',this)">Cleancare Cleansing Wipes (Charcoal) (PBJ0006)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0007',this)">Cleancare Cleansing Wipes (Collagen) (PBJ0007)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0008',this)">Cleancare Cleansing Wipes (Vitamin C) (PBJ0008)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0009',this)">Cleancare Cleansing Wipes (Aloe Vera) (PBJ0009)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0010',this)">Cleancare Cleansing Wipes (Coconut) (PBJ0010)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0011',this)">Cleancare Cleansing Wipes (Chamomile) (PBJ0011)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0012',this)">Cleancare Cleansing Wipes (Rose Water) (PBJ0012)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0013',this)">Purenature Facial Mask (Avocado) (PBJ0013)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0014',this)">Purenature Facial Mask (Honey) (PBJ0014)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0015',this)">Purenature Facial Mask (Cucumber) (PBJ0015)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0016',this)">Purenature Facial Mask (Pomegranate) (PBJ0016)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0017',this)">Purenature Facial Mask (Tea tree) (PBJ0017)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0018',this)">Purenature Facial Mask (Charcoal) (PBJ0018)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0019',this)">Purenature Facial Mask (Collagen) (PBJ0019)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0020',this)">Purenature Facial Mask (Vitamin C) (PBJ0020)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0021',this)">Purenature Facial Mask (Aloe) (PBJ0021)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0022',this)">Purenature Facial Mask (Retinol) (PBJ0022)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0023',this)">Purenature Facial Mask (Acai Berry) (PBJ0023)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0024',this)">Purenature Facial Mask (Rose Water) (PBJ0024)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0025',this)">Purenature Facial Mask 12pcs (Variety Pack) (PBJ0025)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0026',this)">Hydrogel Face Mask (5 Pack) (PBJ0026)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0027',this)">Cleanspot Treatment Hydrocolloid Blemish Patches (PBJ0027)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0028',this)">Cleanspot Healing Hydrocolloid Blemish Patches (PBJ0028)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0029',this)">Donut Dots Hydrocolloid Blemish Patches (PBJ0029)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0030',this)">Fruity Spot Hydrocolloid Blemish Patches (PBJ0030)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0031',this)">CatchPatch Hydrocolloid Blemish Patches (PBJ0031)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-pbj0032',this)">PawPatch Hydrocolloid Blemish Patches (PBJ0032)</button>
-        <button class="sub-tab" onclick="showSubTab('la-products','la-bundles',this)">Bundles</button>
+        <button class="sub-tab active" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0001',this)">Cleancare Cleansing Wipes (Apricot) (PBJ0001)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0002',this)">Cleancare Cleansing Wipes (Honey) (PBJ0002)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0003',this)">Cleancare Cleansing Wipes (Cucumber) (PBJ0003)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0004',this)">Cleancare Cleansing Wipes (Pomegranate) (PBJ0004)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0005',this)">Cleancare Cleansing Wipes (Green Tea) (PBJ0005)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0006',this)">Cleancare Cleansing Wipes (Charcoal) (PBJ0006)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0007',this)">Cleancare Cleansing Wipes (Collagen) (PBJ0007)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0008',this)">Cleancare Cleansing Wipes (Vitamin C) (PBJ0008)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0009',this)">Cleancare Cleansing Wipes (Aloe Vera) (PBJ0009)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0010',this)">Cleancare Cleansing Wipes (Coconut) (PBJ0010)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0011',this)">Cleancare Cleansing Wipes (Chamomile) (PBJ0011)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-makeup-wipes','la-pbj0012',this)">Cleancare Cleansing Wipes (Rose Water) (PBJ0012)</button>
       </div>
 
       <div class="sub-page active" id="la-pbj0001">
@@ -4594,7 +4580,26 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
         <div class="la-card"><div class="la-card-label">Backend Keywords — Spaces Only</div><div class="la-char-info">≤250 chars &nbsp;·&nbsp; <span class="char-pill">— chars used</span></div><div class="la-backend-block" style="color:var(--muted);font-style:italic;">Pending — run Listing Audit (or paste current backend keywords) to populate.</div><button class="la-copy-btn" disabled style="opacity:.5;cursor:not-allowed;">📋 Copy Backend Keywords</button></div>
       </div>
 
-      <div class="sub-page" id="la-pbj0013">
+    </div><!-- /la-cat-makeup-wipes -->
+
+    <div class="channel-page" id="la-cat-face-masks">
+      <div class="sub-tabs" style="flex-wrap:wrap;">
+        <button class="sub-tab active" onclick="showSubTab('la-cat-face-masks','la-pbj0013',this)">Purenature Facial Mask (Avocado) (PBJ0013)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0014',this)">Purenature Facial Mask (Honey) (PBJ0014)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0015',this)">Purenature Facial Mask (Cucumber) (PBJ0015)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0016',this)">Purenature Facial Mask (Pomegranate) (PBJ0016)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0017',this)">Purenature Facial Mask (Tea tree) (PBJ0017)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0018',this)">Purenature Facial Mask (Charcoal) (PBJ0018)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0019',this)">Purenature Facial Mask (Collagen) (PBJ0019)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0020',this)">Purenature Facial Mask (Vitamin C) (PBJ0020)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0021',this)">Purenature Facial Mask (Aloe) (PBJ0021)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0022',this)">Purenature Facial Mask (Retinol) (PBJ0022)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0023',this)">Purenature Facial Mask (Acai Berry) (PBJ0023)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0024',this)">Purenature Facial Mask (Rose Water) (PBJ0024)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-face-masks','la-pbj0025',this)">Purenature Facial Mask 12pcs (Variety Pack) (PBJ0025)</button>
+      </div>
+
+      <div class="sub-page active" id="la-pbj0013">
         <div class="la-hero">
           <div class="la-hero-left">
             <div class="la-hero-meta">PBJ0013 &nbsp;·&nbsp; ASIN B0G547Y4K7 &nbsp;·&nbsp; Face Masks</div>
@@ -4893,7 +4898,14 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
         <div class="la-card"><div class="la-card-label">Backend Keywords — Spaces Only</div><div class="la-char-info">≤250 chars &nbsp;·&nbsp; <span class="char-pill">— chars used</span></div><div class="la-backend-block" style="color:var(--muted);font-style:italic;">Pending — run Listing Audit (or paste current backend keywords) to populate.</div><button class="la-copy-btn" disabled style="opacity:.5;cursor:not-allowed;">📋 Copy Backend Keywords</button></div>
       </div>
 
-      <div class="sub-page" id="la-pbj0026">
+    </div><!-- /la-cat-face-masks -->
+
+    <div class="channel-page" id="la-cat-hydrogel-mask">
+      <div class="sub-tabs" style="flex-wrap:wrap;">
+        <button class="sub-tab active" onclick="showSubTab('la-cat-hydrogel-mask','la-pbj0026',this)">Hydrogel Face Mask (5 Pack) (PBJ0026)</button>
+      </div>
+
+      <div class="sub-page active" id="la-pbj0026">
         <div class="la-hero">
           <div class="la-hero-left">
             <div class="la-hero-meta">PBJ0026 &nbsp;·&nbsp; ASIN B0G3YHD7LC &nbsp;·&nbsp; Hydrogel Mask</div>
@@ -4916,7 +4928,19 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
         <div class="la-card"><div class="la-card-label">Backend Keywords — Spaces Only</div><div class="la-char-info">≤250 chars &nbsp;·&nbsp; <span class="char-pill">— chars used</span></div><div class="la-backend-block" style="color:var(--muted);font-style:italic;">Pending — run Listing Audit (or paste current backend keywords) to populate.</div><button class="la-copy-btn" disabled style="opacity:.5;cursor:not-allowed;">📋 Copy Backend Keywords</button></div>
       </div>
 
-      <div class="sub-page" id="la-pbj0027">
+    </div><!-- /la-cat-hydrogel-mask -->
+
+    <div class="channel-page" id="la-cat-blemish-patches">
+      <div class="sub-tabs" style="flex-wrap:wrap;">
+        <button class="sub-tab active" onclick="showSubTab('la-cat-blemish-patches','la-pbj0027',this)">Cleanspot Treatment Hydrocolloid Blemish Patches (PBJ0027)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-blemish-patches','la-pbj0028',this)">Cleanspot Healing Hydrocolloid Blemish Patches (PBJ0028)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-blemish-patches','la-pbj0029',this)">Donut Dots Hydrocolloid Blemish Patches (PBJ0029)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-blemish-patches','la-pbj0030',this)">Fruity Spot Hydrocolloid Blemish Patches (PBJ0030)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-blemish-patches','la-pbj0031',this)">CatchPatch Hydrocolloid Blemish Patches (PBJ0031)</button>
+        <button class="sub-tab" onclick="showSubTab('la-cat-blemish-patches','la-pbj0032',this)">PawPatch Hydrocolloid Blemish Patches (PBJ0032)</button>
+      </div>
+
+      <div class="sub-page active" id="la-pbj0027">
         <div class="la-hero">
           <div class="la-hero-left">
             <div class="la-hero-meta">PBJ0027 &nbsp;·&nbsp; ASIN B0DQLV5DD9 &nbsp;·&nbsp; Blemish Patches</div>
@@ -5054,7 +5078,10 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
         <div class="la-card"><div class="la-card-label">Backend Keywords — Spaces Only</div><div class="la-char-info">≤250 chars &nbsp;·&nbsp; <span class="char-pill">— chars used</span></div><div class="la-backend-block" style="color:var(--muted);font-style:italic;">Pending — run Listing Audit (or paste current backend keywords) to populate.</div><button class="la-copy-btn" disabled style="opacity:.5;cursor:not-allowed;">📋 Copy Backend Keywords</button></div>
       </div>
 
-      <div class="sub-page" id="la-bundles">
+    </div><!-- /la-cat-blemish-patches -->
+
+    <div class="channel-page" id="la-products">
+      <div class="sub-page active" id="la-bundles">
         <div id="la-bundles-container"><div style="color:var(--muted);font-size:12px;padding:12px;">Loading…</div></div>
       </div>
     </div>
@@ -12987,14 +13014,14 @@ async function initSnsExternal() {
     const ctx = document.getElementById('pd-chart-top-sellers');
     if (!ctx) return;
     if (window._pdTopSellersChart) window._pdTopSellersChart.destroy();
-    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(160, 40 + entries.length * 72) + 'px'; // scales with product count
+    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(170, 40 + entries.length * 84) + 'px'; // scales with product count
     window._pdTopSellersChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: entries.map(e => e.name),
         datasets: [
-          { label: 'Prime Day 2025', data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 14 },
-          { label: 'Prime Day 2026', data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 14 },
+          { label: 'Prime Day 2025', data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 30 },
+          { label: 'Prime Day 2026', data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 30 },
         ],
       },
       plugins: [yoyLabelPlugin],
@@ -13520,14 +13547,14 @@ window.initEventStrategyHeader = async function () {
     if (!ctx) return;
     const chartRef = `_${prefix}TopSellersChart`;
     if (window[chartRef]) window[chartRef].destroy();
-    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(160, 40 + entries.length * 72) + 'px'; // scales with product count
+    if (ctx.parentElement) ctx.parentElement.style.height = Math.max(170, 40 + entries.length * 84) + 'px'; // scales with product count
     window[chartRef] = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: entries.map(e => e.name),
         datasets: [
-          { label: `${eventLabel} ${prevYear}`, data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 14 },
-          { label: `${eventLabel} ${currYear}`, data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 14 },
+          { label: `${eventLabel} ${prevYear}`, data: entries.map(e => e.prev), backgroundColor: '#8a94a6', borderRadius: 3, maxBarThickness: 30 },
+          { label: `${eventLabel} ${currYear}`, data: entries.map(e => e.curr), backgroundColor: '#1b2559', borderRadius: 3, maxBarThickness: 30 },
         ],
       },
       plugins: [yoyLabelPlugin],
@@ -22481,33 +22508,32 @@ async function loadAuditResultsFromSheet() {
     }
   }
 
-  // The server has no Georgia; Gelasio (a free Google font built to match
-  // Georgia's metrics) is fetched and renamed to 'Georgia' so every
-  // existing Georgia rule resolves to it server-side only.
-  const PDFX_GEORGIA_SUBSTITUTE_CSS = 'https://fonts.googleapis.com/css2?family=Gelasio:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=block';
-  let pdfxGeorgiaAliasCss = null;
-  async function pdfxGetGeorgiaAliasCss() {
-    if (pdfxGeorgiaAliasCss !== null) return pdfxGeorgiaAliasCss;
-    try {
-      const u = f => new URL('/' + encodeURIComponent(f), location.origin).href;
-      const probe = await fetch(u('Georgia.ttf'), { method: 'HEAD', cache: 'no-store' }).catch(() => null);
-      if (probe && probe.ok) {
-        const faces = [['Georgia.ttf', 400, 'normal'], ['Georgia Bold.ttf', 700, 'normal'], ['Georgia Italic.ttf', 400, 'italic'], ['Georgia Bold Italic.ttf', 700, 'italic']];
-        pdfxGeorgiaAliasCss = faces.map(([f, w, st]) => "@font-face{font-family:'Georgia';src:url('" + u(f) + "') format('truetype');font-weight:" + w + ";font-style:" + st + ";font-display:block;}").join('');
-        console.log('[pdf-export] using real Georgia font files from Public/');
-        return pdfxGeorgiaAliasCss;
-      }
-      console.warn('[pdf-export] Georgia.ttf not found in Public/ — PDF falls back to Gelasio (Georgia look-alike).');
-    } catch (e) { /* fall through to Gelasio */ }
-    try {
-      const res = await fetch(PDFX_GEORGIA_SUBSTITUTE_CSS);
-      const css = res.ok ? await res.text() : '';
-      pdfxGeorgiaAliasCss = css.replace(/font-family:\s*['"]?Gelasio['"]?/g, "font-family: 'Georgia'");
-    } catch (err) {
-      console.warn('[pdf-export] Georgia substitute font CSS failed to load:', err && err.message);
-      pdfxGeorgiaAliasCss = '';
-    }
-    return pdfxGeorgiaAliasCss;
+  // REAL GEORGIA in the PDF — ported 2026-10-08 from évolis's 2026-10-07 fix,
+  // per Jaclyn: reports use Georgia, the font the dashboard shows, never the
+  // Gelasio stand-in that was here before (ported from VBC). The PDF server
+  // (render-pdf.js, headless Chrome on Linux) has no Georgia installed, so it
+  // can only print Georgia if Georgia's font files are served from this site;
+  // render-pdf.js already allows requests to this deployment's own host.
+  // Regular + Bold cover every weight the dashboard uses (600 resolves to Bold).
+  // Returns the @font-face CSS when both files are reachable, or null — on
+  // null, the export skips the server and renders in the viewer's own browser
+  // (which has real Georgia), so a PDF is never printed in a substitute font.
+  const PDFX_GEORGIA_FILES = [
+    { path: '/Georgia.ttf', weight: 400 },
+    { path: '/Georgia-Bold.ttf', weight: 700 },
+  ];
+  async function pdfxGetGeorgiaFontCss() {
+    const checks = await Promise.all(PDFX_GEORGIA_FILES.map(async f => {
+      try {
+        const res = await fetch(location.origin + f.path, { method: 'HEAD', cache: 'no-store' });
+        const type = (res.headers.get('content-type') || '').toLowerCase();
+        return res.ok && !type.includes('text/html') && !type.includes('text/plain');
+      } catch (e) { return false; }
+    }));
+    if (!checks.every(Boolean)) return null;
+    return PDFX_GEORGIA_FILES.map(f =>
+      "@font-face{font-family:'Georgia';src:url('" + location.origin + encodeURI(f.path) + "') format('truetype');font-weight:" + f.weight + ";font-style:normal;}"
+    ).join('');
   }
 
   async function pdfxBuildRenderDocument(root, pageEls) {
@@ -22526,7 +22552,10 @@ async function loadAuditResultsFromSheet() {
     });
     pdfxWrapSymbolGlyphs(clone);
     await pdfxRasterizeSvgImages(clone);
-    const georgiaAlias = await pdfxGetGeorgiaAliasCss();
+    const georgiaFontCss = await pdfxGetGeorgiaFontCss();
+    if (!georgiaFontCss) {
+      throw new Error('Georgia font files not found at ' + PDFX_GEORGIA_FILES.map(f => f.path).join(' and ') + ' — rendering in the browser instead so headings stay in real Georgia');
+    }
     const css = Array.from(document.querySelectorAll('style')).map(st => st.textContent).join('\n');
     const links = Array.from(document.querySelectorAll('link[rel="stylesheet"]'))
       .map(l => `<link rel="stylesheet" href="${pdfxEscape(l.href)}">`).join('');
@@ -22535,7 +22564,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
 #pdfx-root{position:static!important;left:auto!important;top:auto!important;display:block!important;opacity:1!important;z-index:auto!important;width:8.5in}
 .pdfx-page{width:8.5in;height:11in;min-height:0;overflow:hidden;break-after:page;page-break-after:always}
 .pdfx-page:last-child{break-after:auto;page-break-after:auto}`;
-    return `<!doctype html><html><head><meta charset="utf-8"><base href="${pdfxEscape(location.href)}">${links}<link rel="stylesheet" href="${PDFX_SYMBOL_FONT_CSS}"><style>${georgiaAlias}</style><style>${css}</style><style>${printCss}</style></head><body><div id="pdfx-root">${clone.innerHTML}</div></body></html>`;
+    return `<!doctype html><html><head><meta charset="utf-8"><base href="${pdfxEscape(location.href)}">${links}<link rel="stylesheet" href="${PDFX_SYMBOL_FONT_CSS}"><style>${georgiaFontCss}</style><style>${css}</style><style>${printCss}</style></head><body><div id="pdfx-root">${clone.innerHTML}</div></body></html>`;
   }
 
   async function pdfxRenderViaServer(root, pageEls) {
@@ -22588,10 +22617,14 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
       const el = pageEls[i];
       const pageImgs = Array.from(el.querySelectorAll('img'));
       await Promise.all(pageImgs.map(img => typeof img.decode === 'function' ? img.decode().catch(() => {}) : Promise.resolve()));
+      const needsCORS = el.querySelector('.pdfx-opp-img, .pdfx-opp-img-full') !== null;
       const canvas = await html2canvas(el, {
         scale: 3,
         backgroundColor: '#ffffff',
-        ignoreElements: (node) => node.tagName === 'CANVAS' && !node.closest('#pdfx-root'),
+        windowWidth: el.scrollWidth,
+        windowHeight: el.scrollHeight,
+        ignoreElements: function (node) { return node.tagName === 'CANVAS' && !node.closest('#pdfx-root'); },
+        useCORS: needsCORS,
       });
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       if (i > 0) pdf.addPage();
@@ -22611,6 +22644,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
   // The ONE entry point every export uses — tries real-text server
   // rendering first, falls back to screenshots only if that fails.
   async function pdfxRenderPagesToPdf(root, pageEls) {
+    await new Promise(function (r) { requestAnimationFrame(r); });
     try {
       const blob = await pdfxRenderViaServer(root, pageEls);
       console.log('[pdf-export] real-text PDF rendered server-side:', (blob.size / 1048576).toFixed(2) + 'MB');
