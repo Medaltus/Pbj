@@ -24000,26 +24000,25 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
       let proratedSpend = 0, proratedSales = 0, proratedSpendPrev = 0, proratedSalesPrev = 0;
       if (isCsv(adOrdersCsv)) {
         const adRows = parseCsv(adOrdersCsv);
-        let lm = refMonth - 1, ly = refYear; // FIXED 2026-08-28 for MTD/Last Month toggle — was always today's month
-        lm -= 1; if (lm === 0) { lm = 12; ly--; }
-        let lm2 = lm - 1, ly2 = ly;
-        if (lm2 === 0) { lm2 = 12; ly2--; }
-
-        const lastMonthAdRows = adRows.filter(r => parseInt(r.year, 10) === ly && parseInt(r.month, 10) === lm);
-        const twoMonthsAgoAdRows = adRows.filter(r => parseInt(r.year, 10) === ly2 && parseInt(r.month, 10) === lm2);
-
-        const lastMonthSpend = lastMonthAdRows.reduce((s, r) => s + parseAmt(r.spend), 0);
-        const lastMonthSales = lastMonthAdRows.reduce((s, r) => s + parseAmt(r.sales), 0);
-        const twoMonthsAgoSpend = twoMonthsAgoAdRows.reduce((s, r) => s + parseAmt(r.spend), 0);
-        const twoMonthsAgoSales = twoMonthsAgoAdRows.reduce((s, r) => s + parseAmt(r.sales), 0);
-
-        const daysInLastMonth = new Date(ly, lm, 0).getDate();
-        const daysInTwoMonthsAgo = new Date(ly2, lm2, 0).getDate();
-
-        proratedSpend = lastMonthSpend * (daysElapsed / daysInLastMonth);
-        proratedSales = lastMonthSales * (daysElapsed / daysInLastMonth);
-        proratedSpendPrev = twoMonthsAgoSpend * (daysElapsed / daysInTwoMonthsAgo);
-        proratedSalesPrev = twoMonthsAgoSales * (daysElapsed / daysInTwoMonthsAgo);
+        // FIXED 2026-10-14 (PB & Jay): real figures for the selected month
+        // (ad orders sheet carries the current month to date), comparison
+        // month = the month before it.
+        const sumAd = (rows, f) => rows.reduce((t, r) => t + parseAmt(r[f]), 0);
+        const selRows = adRows.filter(r => parseInt(r.year, 10) === refYear && parseInt(r.month, 10) === refMonth);
+        const cmpRows = adRows.filter(r => parseInt(r.year, 10) === cmpYear && parseInt(r.month, 10) === cmpMonth);
+        const daysInCmp = new Date(cmpYear, cmpMonth, 0).getDate();
+        const cmpFactor = periodKey === 'lastFull' ? 1 : Math.min(1, daysElapsed / daysInCmp);
+        proratedSpendPrev = sumAd(cmpRows, 'spend') * cmpFactor;
+        proratedSalesPrev = sumAd(cmpRows, 'sales') * cmpFactor;
+        if (selRows.length) {
+          proratedSpend = sumAd(selRows, 'spend');
+          proratedSales = sumAd(selRows, 'sales');
+        } else {
+          // no rows yet for the selected month — estimate from the prior month
+          proratedSpend = sumAd(cmpRows, 'spend') * Math.min(1, daysElapsed / daysInCmp);
+          proratedSales = sumAd(cmpRows, 'sales') * Math.min(1, daysElapsed / daysInCmp);
+        }
+        console.log('[PBJ][overview] Amazon ad spend/sales', refYear + '-' + refMonth, proratedSpend.toFixed(2), proratedSales.toFixed(2), selRows.length ? '(actual)' : '(estimated)', '| prior', proratedSpendPrev.toFixed(2), proratedSalesPrev.toFixed(2));
       } else {
         console.warn('[PBJ][overview] ad orders sheet did not return CSV — Ad Spend/ACOS will reflect Website only.');
       }
