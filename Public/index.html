@@ -24053,7 +24053,18 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
               // Actual — pending-inclusive, netted against returns, same
               // date range already resolved for the page's own toggle.
               const goalsAmzAgg = aggregateRange(amzRows, mtdStartStr, mtdEndStr, goalsIsValidAmazonRow);
-              const totalActual = goalsAmzAgg.totalRevenue - amzReturnsMtd.totalAmt;
+              // CHANGED 2026-10-14 per Jaclyn: goals cover Amazon + Walmart
+              // combined, so Walmart's net revenue and ad sales are added in.
+              const amzTotalActual = goalsAmzAgg.totalRevenue - amzReturnsMtd.totalAmt;
+              const totalActual = amzTotalActual + wmtMtdNetRevenue;
+              let gtWalmartAdSales = 0;
+              try {
+                const _wAdvCsv = await fetch(sheetCsvUrl(WALMART_ADVERTISING_SHEET_ID, WALMART_ADVERTISING_GID) + `&_cb=${Date.now()}`).then(r => r.ok ? r.text() : '').catch(() => '');
+                if (isCsv(_wAdvCsv)) {
+                  const _wRow = parseCsv(_wAdvCsv).find(r => parseInt(r.year, 10) === refYear && parseInt(r.month, 10) === refMonth);
+                  if (_wRow) gtWalmartAdSales = parseAmt(_wRow.sales);
+                }
+              } catch (e) { console.warn('[PBJ][overview][GoalTracker] Walmart ad sales lookup failed:', e.message); }
 
               // Ads actual — MTD reuses the page's own established
               // prorated estimate (Amazon ad data is monthly-bucketed,
@@ -24070,6 +24081,8 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
               } else {
                 adsActual = proratedSales;
               }
+              adsActual += gtWalmartAdSales; // Walmart ad sales (same month)
+              console.log('[PBJ][overview][GoalTracker] total', totalActual.toFixed(2), '(Amazon', amzTotalActual.toFixed(2), '+ Walmart', wmtMtdNetRevenue.toFixed(2) + ') | ads', adsActual.toFixed(2), '(Walmart ads', gtWalmartAdSales.toFixed(2) + ')');
               const organicActual = Math.max(0, totalActual - adsActual);
 
               const daysInTargetMonth = new Date(refYear, refMonth, 0).getDate();
@@ -24201,7 +24214,7 @@ html,body{height:auto!important;margin:0!important;padding:0!important;backgroun
               gtWrap.innerHTML = `
                 <div class="org-section-title" style="margin-bottom:10px;font-size:22px;font-weight:700;">Goal Tracker</div>
                 <div class="card" style="background:var(--sand);border-top:3px solid var(--navy);margin-bottom:22px;">
-                  <div class="card-title" style="margin-bottom:14px;font-size:19px;font-weight:700;">Amazon</div>
+                  <div class="card-title" style="margin-bottom:14px;font-size:19px;font-weight:700;">Amazon + Walmart</div>
                   <div style="display:flex;align-items:flex-start;justify-content:space-around;flex-wrap:wrap;gap:24px;width:100%;">
                     ${gtRing(totalActual, totalGoal, 'Total Sales')}
                     ${gtRingClassic(organicActual, organicGoal, 'Organic Sales')}
