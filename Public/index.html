@@ -1409,6 +1409,15 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 .trf-media-hd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
 .trf-select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border2);border-radius:8px;min-width:320px;max-width:100%;color:var(--navy);background:#fff;}
 @media (max-width:640px){ .trf-source{text-align:left;} .trf-select{min-width:0;width:100%;} }
+.trf-chg-dot{flex:0 0 18px;height:18px;border-radius:50%;background:#001F60;color:#fff;font-size:10px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
+.trf-oos-swatch{flex:0 0 18px;height:6px;border-radius:2px;margin-top:6px;}
+.trf-chg{margin-top:3px;}
+.trf-chg summary{cursor:pointer;font-size:11px;color:var(--muted);font-weight:600;}
+.trf-chg-field{font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.04em;margin:8px 0 4px;}
+.trf-chg-row{display:flex;gap:8px;font-size:11.5px;line-height:1.45;margin-bottom:4px;color:var(--navy);}
+.trf-chg-lbl{flex:0 0 46px;font-weight:700;color:var(--muted);}
+.trf-chg-row.new .trf-chg-lbl{color:#1db88a;}
+.trf-anno-key{display:inline-flex;align-items:center;gap:6px;margin-left:16px;font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;}
 </style>
 <link rel="icon" type="image/png" href="PBJ_favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -24864,12 +24873,27 @@ window.addEventListener('load', async () => {
 // Conversion is always units ÷ sessions for the group, never an average of
 // per-product rates. Categories come from the Master SKU List (col K).
 // Amazon events (Events tab) are shaded on the charts, like VBC's.
-// Not ported from VBC (no PB & Jay source for them): media mentions,
-// out-of-stock stretches and listing-change pins.
+// Out-of-stock stretches and listing changes (added 2026-11-11, same as
+// MiGuard's Traffic page): OOS = a red strip along the bottom of the chart
+// (dark = all inventory out, light = FBA only), listing change = a navy pin
+// numbered with the fields changed. Each chart only shows the products it
+// covers. Sources: Out Of Stock Historical Log → pbj tab, Listing Change Log
+// → pbj tab. VBC's media-mention pins are left out (no PB & Jay sheet).
 // ═══════════════════════════════════════════════════════════════════
 (function () {
   const PBJ_DAILY_BR_CSV = 'https://docs.google.com/spreadsheets/d/1QLjUvYg-JR6jQmdFlykypkNarqsZvTCOgA3bFagDlVg/export?format=csv&gid=845410408';
   const PBJ_EVENTS_CSV   = 'https://docs.google.com/spreadsheets/d/1NNRTRQxQl2r4XivAvH700CC39p49GD2xfZlyRNqahGA/export?format=csv&gid=347530381';
+  const PBJ_OOS_LOG_CSV  = 'https://docs.google.com/spreadsheets/d/1lbvdt8qcSRItrkWGjWnaJHcoBhjY275b1M6fM5_dKAM/export?format=csv&gid=879843690'; // Out Of Stock Historical Log → pbj
+  const PBJ_CHANGES_CSV  = 'https://docs.google.com/spreadsheets/d/1UUBGtUsE_nUPBSH9MyuEu27CqJI-XWJBh5wpT2DsEOk/export?format=csv&gid=1731001036'; // Listing Change Log → pbj
+  const TRF_ANNO = { listing:'#001F60', oosAll:'#db372d', oosFba:'#f08c84' };
+  const TRF_FIELD_LABEL = { title:'Title', item_highlights:'Item Highlights', description:'Description', backend_keywords:'Backend keywords', offers:'Price', bullet_points:'Bullets', bullets:'Bullets' };
+  function fieldLabel(f){
+    f = String(f || '').trim().toLowerCase();
+    if (TRF_FIELD_LABEL[f]) return TRF_FIELD_LABEL[f];
+    const b = f.match(/^bullet[_\s-]*(?:point[_\s-]*)?(\d+)$/);
+    if (b) return 'Bullet ' + b[1];
+    return f.replace(/_/g, ' ').replace(/^./, c => c.toUpperCase());
+  }
   const TRF_EVENT_COLOR = '#FF9900';
   const TRF_FINAL_AFTER = 4; // days before a day's numbers stop moving
   const TRF_CATS = [['Makeup Wipes','Makeup Wipes'],['Face Masks','Face Masks'],['Hydrogel Mask','Hydrogel Mask'],['Blemish Patches','Blemish Patches']];
@@ -24921,7 +24945,8 @@ window.addEventListener('load', async () => {
       const skuCfg = (window.SHEET_CFG || {}).SHEET_MASTER_SKU_LIST || {};
       const skuUrl = `https://docs.google.com/spreadsheets/d/${skuCfg.fileId}/export?format=csv&gid=${skuCfg.gid}`;
       const soft = (u, what) => fetchRows(u).catch(e => { console.warn(`[PBJ][Traffic] ${what}:`, e.message); return []; });
-      const [dailyRows, skuRows, eventRows] = await Promise.all([ fetchRows(PBJ_DAILY_BR_CSV), soft(skuUrl, 'Master SKU List'), soft(PBJ_EVENTS_CSV, 'events') ]);
+      const [dailyRows, skuRows, eventRows, oosRows, chgRows] = await Promise.all([ fetchRows(PBJ_DAILY_BR_CSV), soft(skuUrl, 'Master SKU List'), soft(PBJ_EVENTS_CSV, 'events'),
+        soft(PBJ_OOS_LOG_CSV, 'out-of-stock log'), soft(PBJ_CHANGES_CSV, 'listing change log') ]);
       // Catalog from the Master SKU List: ASIN → { name, sku, cat }
       const catOf = {}, nameOf = {}, skuOf = {}, byCat = {};
       skuRows.forEach(r => {
@@ -24954,6 +24979,34 @@ window.addEventListener('load', async () => {
         const start = normDate(col(r, 'start_date', 'start date', 'start')), end0 = normDate(col(r, 'end_date', 'end date', 'end')) || start;
         return { name: col(r, 'event name', 'event'), start, end: end0 < start ? start : end0 };
       }).filter(e => e.name && e.start).sort((a, b) => a.start.localeCompare(b.start));
+      // ── Out of stock: asin → [{ type, s, e, open, sku }]. type = fba (FBA
+      // available hit 0) or all_inventory (every source hit 0). Open rows run
+      // through today. closed_discontinued rows are skipped (same as MiGuard).
+      const isMine = r => { const b = (r.brand || '').trim().toLowerCase(); return !b || b === 'pbj'; };
+      const today = todayPT();
+      _trf.oosRaw = {};
+      oosRows.forEach(r => {
+        if (!isMine(r) || (r.status || '').trim().toLowerCase() === 'closed_discontinued') return;
+        const type = (r.type || '').trim().toLowerCase();
+        if (type !== 'fba' && type !== 'all_inventory') return;
+        const asin = (r.asin || '').trim().toUpperCase(), s0 = normDate(r.start_date);
+        if (!asin || !s0) return;
+        const e0 = normDate(r.end_date);
+        (_trf.oosRaw[asin] = _trf.oosRaw[asin] || []).push({ type, s:s0, e: e0 ? (e0 < s0 ? s0 : e0) : today, open: !e0, sku: (r.sku || '').trim() });
+      });
+      // ── Listing changes: skip a blank old_value (first capture of a field —
+      // a baseline, not a change) and edits that only differ by whitespace /
+      // mis-encoded characters.
+      const plain = v => String(v || '').replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/\s+/g, ' ').trim();
+      const sameText = (a, b) => { const n = v => plain(v).replace(/[^\x20-\x7E]/g, '').replace(/\s+/g, ' ').trim().toLowerCase(); return n(a) === n(b); };
+      _trf.chg = [];
+      chgRows.forEach(r => {
+        if (!isMine(r)) return;
+        const d = normDate(r.date) || normDate(r.logged_at), asin = (r.asin || '').trim().toUpperCase();
+        if (!d || !asin || !plain(r.old_value) || sameText(r.old_value, r.new_value)) return;
+        _trf.chg.push({ date:d, asin, sku:(r.sku || '').trim(), field: fieldLabel(r.field), oldV: plain(r.old_value), newV: plain(r.new_value) });
+      });
+      _trf.logsLoaded = { oos: oosRows.length > 0, chg: chgRows.length > 0 };
       Object.assign(_trf, { daily:{ byDate:daily, dates }, br, catOf, nameOf, skuOf, byCat });
       return _trf;
     })();
@@ -25067,6 +25120,40 @@ window.addEventListener('load', async () => {
     },
   };
 
+  // Out-of-stock days/runs and listing changes for the products a chart covers.
+  // Overall chart: the expired Makeup Wipes (PBJ0001–0012, phased out from
+  // Aug 2026) are left out of the OOS strips — they're out almost every day
+  // and would cover the whole chart. They still show on the Makeup Wipes
+  // category and on each wipe's own product chart.
+  function annoData(asins){
+    const want = a => !asins || asins.has(a);
+    const wipes = window.PBJ_SALES_EXCLUDED_ASINS || new Set();
+    const wantOos = a => asins ? asins.has(a) : !wipes.has(a);
+    const label = a => _trf.skuOf[a] || a;
+    const oosDay = {}, oosRuns = [];
+    Object.entries(_trf.oosRaw || {}).forEach(([asin, ps]) => {
+      if (!wantOos(asin)) return;
+      const kindOf = {};
+      ps.forEach(pp => { for (let d = pp.s; d <= pp.e; d = addDays(d, 1)) { if (pp.type === 'all_inventory') kindOf[d] = 'all'; else if (!kindOf[d]) kindOf[d] = 'fba'; } });
+      const hasOpen = ps.some(pp => pp.open), today = todayPT();
+      let run = null;
+      Object.keys(kindOf).sort().forEach(d => {
+        const k = kindOf[d];
+        if (run && run.kind === k && addDays(run.end, 1) === d) run.end = d;
+        else { run = { asin, sku: label(asin), name: (_trf.nameOf[asin] && _trf.nameOf[asin] !== label(asin)) ? _trf.nameOf[asin] : '', kind: k, start: d, end: d }; oosRuns.push(run); }
+        const od = oosDay[d] = oosDay[d] || { kind:'fba', skus:[] };
+        if (k === 'all') od.kind = 'all';
+        od.skus.push(label(asin) + (k === 'all' ? '' : ' (FBA)'));
+      });
+      oosRuns.forEach(rn => { if (rn.asin === asin) rn.ongoing = hasOpen && rn.end === today; });
+    });
+    oosRuns.sort((a, b) => a.start.localeCompare(b.start) || a.sku.localeCompare(b.sku));
+    const byDate = {};
+    (_trf.chg || []).forEach(c => { if (want(c.asin)) (byDate[c.date] = byDate[c.date] || []).push(c); });
+    const listing = Object.keys(byDate).sort().map(date => ({ date, items: byDate[date] }));
+    return { oosDay, oosRuns, listing, multi: !asins || asins.size > 1 };
+  }
+
   function render(key){
     if (!_trf.daily) return;
     const metric = _trf.metric[key], asins = asinSet(key);
@@ -25079,6 +25166,7 @@ window.addEventListener('load', async () => {
     else titleEl.textContent = `PB & Jay — All Products — ${metricLbl}`;
 
     let labels, datasets, note = '', bands = [];
+    const ad = annoData(asins), annos = { pins:[], oos:[] }, annoList = { listing:[], oos:[] };
     if (_trf.view === 'monthly'){
       const now = new Date(), cy = now.getFullYear(), stop = now.getMonth(); // months before the current one
       datasets = [];
@@ -25097,6 +25185,15 @@ window.addEventListener('load', async () => {
         if (ds.data.slice(i0, i1 + 1).every(v => v == null)) return;
         bands.push({ i0, i1, e, ly: y !== cy, yr: y });
       });
+      // Monthly: a pin on the month of a listing change; a strip under any
+      // month with out-of-stock days (tooltip gives the day counts).
+      const dsFor = y => datasets.find(x => x.label === String(y));
+      const hasData = (y, i) => { const ds = dsFor(y); return ds && ds.data[i] != null; };
+      ad.listing.forEach(c => { const [y, m] = c.date.split('-').map(Number); if (hasData(y, m - 1)){ annos.pins.push({ i:m - 1, c, yr:y }); annoList.listing.push(c); } });
+      const oosMonth = {};
+      Object.entries(ad.oosDay).forEach(([d, o]) => { const k = d.slice(0, 7); const e = oosMonth[k] = oosMonth[k] || { all:0, fba:0 }; e[o.kind]++; });
+      Object.entries(oosMonth).forEach(([k, n]) => { const [y, m] = k.split('-').map(Number); if (hasData(y, m - 1)) annos.oos.push({ i:m - 1, kind: n.all ? 'all' : 'fba', counts:n, yr:y }); });
+      annoList.oos = ad.oosRuns.filter(r => { const [y, m] = r.start.split('-').map(Number), [y1, m1] = r.end.split('-').map(Number); return hasData(y, m - 1) || hasData(y1, m1 - 1); });
       const { year, month } = lastFullMonth(), pm = prevMonth(year, month);
       const v = val(sum(_trf.br[ym(year, month)], asins), metric), vp = val(sum(_trf.br[ym(pm.year, pm.month)], asins), metric), vy = val(sum(_trf.br[ym(year - 1, month)], asins), metric);
       const ab = MONTHS[month - 1];
@@ -25123,6 +25220,10 @@ window.addEventListener('load', async () => {
           const t = span(e.start, e.end); if (t) bands.push({ i0:t[0], i1:t[1], e });
           if (hasLy){ const l = span(shiftYear(e.start, 1), shiftYear(e.end, 1)); if (l) bands.push({ i0:l[0], i1:l[1], e, ly:true }); }
         });
+        // Daily: a pin on each listing-change day, a strip under each out-of-stock day
+        ad.listing.forEach(c => { const i = days.indexOf(c.date); if (i >= 0){ annos.pins.push({ i, c }); annoList.listing.push(c); } });
+        days.forEach((d, i) => { const o = ad.oosDay[d]; if (o) annos.oos.push({ i, kind:o.kind, skus:o.skus }); });
+        annoList.oos = ad.oosRuns.filter(r => r.end >= days[0] && r.start <= days[days.length - 1]);
         if (hasLy) datasets.push({ label:'Same days last year', data:ly, borderColor:c1.border, backgroundColor:'transparent', fill:false, pointRadius:0, tension:0.25, borderWidth:2, spanGaps:false });
         const pool = arr => { let s = 0, u = 0, n = 0; arr.forEach(d => { const t = sum(byDate[d], asins); if (t){ s += t.s; u += t.u; n++; } }); return n ? { s, u, n } : null; };
         const N = days.length;
@@ -25143,25 +25244,97 @@ window.addEventListener('load', async () => {
     const opts = chartOptions(fmt);
     opts.scales.y.beginAtZero = metric !== 'conv';
     opts.plugins.pbjTrfBands = { bands };
+    opts.plugins.pbjTrfAnno = annos;
+    opts.layout = { padding:{ top: annos.pins.length ? 22 : 4 } };
     const evYr = b => b.yr ? ` ${b.yr}` : (b.ly ? ' (last year)' : '');
+    const listSkus = arr => arr.length > 6 ? arr.slice(0, 6).join(', ') + ` +${arr.length - 6} more` : arr.join(', ');
     opts.plugins.tooltip.callbacks.footer = items => {
       const i = items.length ? items[0].dataIndex : -1;
-      return bands.filter(b => i >= b.i0 && i <= b.i1).map(b => `🛒 ${b.e.name}${evYr(b)}`);
+      const out = bands.filter(b => i >= b.i0 && i <= b.i1).map(b => `🛒 ${b.e.name}${evYr(b)}`);
+      annos.pins.filter(pn => pn.i === i).forEach(pn => out.push(`✏️ Listing change${pn.yr ? ' ' + MONTHS[i] + ' ' + pn.yr : ''}: ${[...new Set(pn.c.items.map(x => x.field))].join(', ')}${ad.multi ? ' (' + listSkus([...new Set(pn.c.items.map(x => x.sku))]) + ')' : ''}`));
+      annos.oos.filter(o => o.i === i).forEach(o => {
+        if (o.counts){ const parts = []; if (o.counts.all) parts.push(`${o.counts.all} day${o.counts.all === 1 ? '' : 's'} all inventory`); if (o.counts.fba) parts.push(`${o.counts.fba} day${o.counts.fba === 1 ? '' : 's'} FBA only`); out.push(`⛔ Out of stock ${MONTHS[i]} ${o.yr}: ${parts.join(', ')}${ad.multi ? ' (any product)' : ''}`); }
+        else out.push(`⛔ Out of stock${ad.multi ? ` (${o.skus.length} product${o.skus.length === 1 ? '' : 's'}): ${listSkus(o.skus)}` : ' — ' + (o.kind === 'all' ? 'all inventory' : 'FBA only')}`);
+      });
+      return out;
     };
     opts.plugins.tooltip.footerColor = '#001F60';
     const ch = _trf.charts[key];
     if (ch){ ch.data.labels = labels; ch.data.datasets = datasets; ch.options = opts; ch.update(); }
-    else _trf.charts[key] = new Chart(canvas, { type:'line', data:{ labels, datasets }, options:opts, plugins:[TRF_BANDS_PLUGIN] });
+    else _trf.charts[key] = new Chart(canvas, { type:'line', data:{ labels, datasets }, options:opts, plugins:[TRF_BANDS_PLUGIN, TRF_ANNO_PLUGIN] });
     const evEl = document.getElementById(`trf-${key}-media`);
     if (evEl){
       const seen = new Set(), evs = bands.slice().sort((x, y) => x.i0 - y.i0 || (x.yr || 0) - (y.yr || 0)).filter(b => { const k = b.e.name + b.e.start + (b.ly ? 'L' : ''); if (seen.has(k)) return false; seen.add(k); return true; });
-      evEl.innerHTML = evs.length ? `<div class="trf-media-hd">Amazon events</div>` + evs.map(b => `<div class="trf-media-item"><span class="trf-ev-swatch" style="background:${TRF_EVENT_COLOR};opacity:${b.ly ? .45 : .8};"></span><span><b>${esc(b.e.name)}</b> · ${fmtRange(b.e.start, b.e.end)}${b.ly ? (b.yr ? ` <span style="color:var(--muted);">(on the ${b.yr} line)</span>` : ' <span style="color:var(--muted);">(last year, shown on the same dates)</span>') : ''}</span></div>`).join('') : '';
+      const evHtml = evs.length ? `<div class="trf-media-hd">Amazon events</div>` + evs.map(b => `<div class="trf-media-item"><span class="trf-ev-swatch" style="background:${TRF_EVENT_COLOR};opacity:${b.ly ? .45 : .8};"></span><span><b>${esc(b.e.name)}</b> · ${fmtRange(b.e.start, b.e.end)}${b.ly ? (b.yr ? ` <span style="color:var(--muted);">(on the ${b.yr} line)</span>` : ' <span style="color:var(--muted);">(last year, shown on the same dates)</span>') : ''}</span></div>`).join('') : '';
+      // Listing changes — one line per date, before/after behind a toggle
+      const clip = (v, n) => v.length > n ? v.slice(0, n).trimEnd() + '…' : v;
+      const fmtD = iso => { const [y, m, d] = iso.split('-').map(Number); return `${MONTHS[m - 1]} ${d}, ${y}`; };
+      const gap = s => s ? 'margin-top:8px;' : '';
+      const chgHtml = annoList.listing.length ? `<div class="trf-media-hd" style="${gap(evHtml)}">Listing changes</div>` + annoList.listing.map(c => {
+        const fields = [...new Set(c.items.map(x => x.field))];
+        const skus = [...new Set(c.items.map(x => x.sku))];
+        const detail = c.items.map(x => `<div class="trf-chg-field">${esc(x.field)}${ad.multi && x.sku ? ' · ' + esc(x.sku) + (_trf.nameOf[x.asin] ? ' — ' + esc(_trf.nameOf[x.asin]) : '') : ''}</div>`
+          + `<div class="trf-chg-row"><span class="trf-chg-lbl">Before</span><span>${esc(clip(x.oldV, 700))}</span></div>`
+          + `<div class="trf-chg-row new"><span class="trf-chg-lbl">After</span><span>${esc(clip(x.newV, 700)) || '<i>(removed)</i>'}</span></div>`).join('');
+        return `<div class="trf-media-item"><span class="trf-chg-dot">${c.items.length}</span><div style="flex:1;min-width:0;"><b>${fmtD(c.date)}</b> · ${esc(fields.join(', '))}${ad.multi ? ` <span style="color:var(--muted);">· ${skus.length} product${skus.length === 1 ? '' : 's'}</span>` : ''}<details class="trf-chg"><summary>Before / after</summary>${detail}</details></div></div>`;
+      }).join('') : '';
+      // Out of stock — one line per stretch
+      const dayN = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400000) + 1;
+      const oosHtml = annoList.oos.length ? `<div class="trf-media-hd" style="${gap(evHtml + chgHtml)}">Out of stock</div>` + annoList.oos.map(r => {
+        const n = dayN(r.start, r.end);
+        const range = r.ongoing ? `${fmtD(r.start)} → today` : fmtRange(r.start, r.end);
+        const what = r.kind === 'all' ? 'Out of stock — all inventory' : 'FBA out of stock (other inventory still on hand)';
+        return `<div class="trf-media-item"><span class="trf-oos-swatch" style="background:${r.kind === 'all' ? TRF_ANNO.oosAll : TRF_ANNO.oosFba};"></span><span><b>${range}</b> · ${ad.multi ? esc(r.sku) + (r.name ? ' — ' + esc(r.name) : '') + ' · ' : ''}${what} · ${n} day${n === 1 ? '' : 's'}${r.ongoing ? ' <span class="oos-pill ongoing" style="margin-left:4px;">Ongoing</span>' : ''}</span></div>`;
+      }).join('') : '';
+      const warn = (_trf.logsLoaded && (!_trf.logsLoaded.oos || !_trf.logsLoaded.chg)) ? `<div class="trf-media-hd" style="text-transform:none;font-weight:500;${gap(evHtml + chgHtml + oosHtml)}">${!_trf.logsLoaded.oos ? 'The out-of-stock log' : 'The listing change log'}${(!_trf.logsLoaded.oos && !_trf.logsLoaded.chg) ? ' and the listing change log' : ''} couldn't load — the sheet needs link sharing (view).</div>` : '';
+      evEl.innerHTML = evHtml + chgHtml + oosHtml + warn;
     }
     renderLegend(_trf.charts[key], `trf-legend-${key}`);
+    const lg = document.getElementById(`trf-legend-${key}`);
+    if (lg) lg.innerHTML += (annos.pins.length ? `<span class="trf-anno-key"><span class="trf-chg-dot" style="flex:0 0 14px;height:14px;font-size:0;"></span>Listing change</span>` : '')
+      + (annos.oos.length ? `<span class="trf-anno-key"><span style="width:16px;height:6px;border-radius:2px;background:${TRF_ANNO.oosAll};display:inline-block;"></span>Out of stock</span>` : '');
   }
+  // Listing-change pins + out-of-stock strips (from MiGuard's Traffic page).
+  // OOS: a light tint over the day plus a solid strip along the bottom
+  // (dark red = all inventory out, light red = FBA only). Listing change: a
+  // dashed navy line with a pin above the plot (number = fields changed).
+  const TRF_ANNO_PLUGIN = {
+    id:'pbjTrfAnno',
+    beforeDatasetsDraw(chart, _args, opts){
+      const oos = (opts && opts.oos) || [];
+      if (!oos.length) return;
+      const { ctx, chartArea:{ top, bottom, left, right }, scales:{ x } } = chart;
+      const step = x.getPixelForValue(1) - x.getPixelForValue(0) || 0;
+      oos.forEach(o => {
+        const x0 = Math.max(left, x.getPixelForValue(o.i) - step/2), x1 = Math.min(right, x.getPixelForValue(o.i) + step/2);
+        ctx.save();
+        ctx.fillStyle = o.kind === 'all' ? TRF_ANNO.oosAll : TRF_ANNO.oosFba;
+        ctx.globalAlpha = 0.07; ctx.fillRect(x0, top, Math.max(1, x1 - x0), bottom - top);
+        ctx.globalAlpha = 0.9; ctx.fillRect(x0, bottom - 6, Math.max(2, x1 - x0), 6);
+        ctx.restore();
+      });
+    },
+    afterDatasetsDraw(chart, _args, opts){
+      const pins = (opts && opts.pins) || [];
+      if (!pins.length) return;
+      const { ctx, chartArea:{ top, bottom }, scales:{ x } } = chart;
+      const byI = {};
+      pins.forEach(pn => { byI[pn.i] = (byI[pn.i] || 0) + pn.c.items.length; });
+      Object.entries(byI).forEach(([i, n]) => {
+        const px = x.getPixelForValue(Number(i));
+        ctx.save();
+        ctx.strokeStyle = TRF_ANNO.listing; ctx.globalAlpha = 0.5; ctx.lineWidth = 1; ctx.setLineDash([4,3]);
+        ctx.beginPath(); ctx.moveTo(px, top); ctx.lineTo(px, bottom); ctx.stroke();
+        ctx.globalAlpha = 1; ctx.setLineDash([]);
+        ctx.fillStyle = TRF_ANNO.listing; ctx.beginPath(); ctx.arc(px, top - 10, 9, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#fff'; ctx.font = `700 ${n > 99 ? 8 : 10}px DM Sans, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(String(n), px, top - 10);
+        ctx.restore();
+      });
+    },
+  };
 })();
 
 </script>
 </body>
 </html>
- 
