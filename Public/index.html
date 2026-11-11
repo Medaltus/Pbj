@@ -25120,15 +25120,11 @@ window.addEventListener('load', async () => {
     },
   };
 
-  // Out-of-stock days/runs and listing changes for the products a chart covers.
-  // Overall chart: the expired Makeup Wipes (PBJ0001–0012, phased out from
-  // Aug 2026) are left out of the OOS strips — they're out almost every day
-  // and would cover the whole chart. They still show on the Makeup Wipes
-  // category and on each wipe's own product chart.
-  function annoData(asins){
+  // Out-of-stock days/runs for the products a chart covers, and listing
+  // changes — those only on the By Product chart (per Jaclyn 2026-11-11).
+  function annoData(asins, withListing){
     const want = a => !asins || asins.has(a);
-    const wipes = window.PBJ_SALES_EXCLUDED_ASINS || new Set();
-    const wantOos = a => asins ? asins.has(a) : !wipes.has(a);
+    const wantOos = want;
     const label = a => _trf.skuOf[a] || a;
     const oosDay = {}, oosRuns = [];
     Object.entries(_trf.oosRaw || {}).forEach(([asin, ps]) => {
@@ -25141,17 +25137,44 @@ window.addEventListener('load', async () => {
         const k = kindOf[d];
         if (run && run.kind === k && addDays(run.end, 1) === d) run.end = d;
         else { run = { asin, sku: label(asin), name: (_trf.nameOf[asin] && _trf.nameOf[asin] !== label(asin)) ? _trf.nameOf[asin] : '', kind: k, start: d, end: d }; oosRuns.push(run); }
-        const od = oosDay[d] = oosDay[d] || { kind:'fba', skus:[] };
+        const od = oosDay[d] = oosDay[d] || { kind:'fba', skus:[], items:[] };
         if (k === 'all') od.kind = 'all';
         od.skus.push(label(asin) + (k === 'all' ? '' : ' (FBA)'));
+        od.items.push({ asin, k });
       });
       oosRuns.forEach(rn => { if (rn.asin === asin) rn.ongoing = hasOpen && rn.end === today; });
     });
     oosRuns.sort((a, b) => a.start.localeCompare(b.start) || a.sku.localeCompare(b.sku));
     const byDate = {};
-    (_trf.chg || []).forEach(c => { if (want(c.asin)) (byDate[c.date] = byDate[c.date] || []).push(c); });
+    (_trf.chg || []).forEach(c => { if (withListing && want(c.asin)) (byDate[c.date] = byDate[c.date] || []).push(c); });
     const listing = Object.keys(byDate).sort().map(date => ({ date, items: byDate[date] }));
     return { oosDay, oosRuns, listing, multi: !asins || asins.size > 1 };
+  }
+
+  // All Products chart: out-of-stocks are grouped by category and show the
+  // SKU's ending number — "Makeup Wipes (3 • 5, 7 & 8)" (per Jaclyn 2026-11-11).
+  const CAT_ORDER = TRF_CATS.map(c => c[0]).concat(['Bundles']);
+  const catOfA = a => _trf.catOf[a] || 'Bundles';
+  const skuNum = a => { const s = _trf.skuOf[a] || a; const m = s.match(/^PBJ0*(\d+)$/i); return m ? m[1] : s.replace(/^PBJ0*/i, ''); };
+  const andList = arr => arr.length <= 1 ? (arr[0] || '') : arr.slice(0, -1).join(', ') + ' & ' + arr[arr.length - 1];
+  const sortNums = arr => arr.slice().sort((x, y) => (parseInt(x, 10) || 9999) - (parseInt(y, 10) || 9999) || String(x).localeCompare(String(y)));
+  function oosByCatDay(od){
+    const g = {};
+    od.items.forEach(it => { (g[catOfA(it.asin)] = g[catOfA(it.asin)] || []).push(it); });
+    return CAT_ORDER.filter(c => g[c]).map(c => {
+      const nums = sortNums(g[c].map(it => skuNum(it.asin) + (it.k === 'all' ? '' : ' (FBA)')));
+      return `${c} (${nums.length} • ${andList(nums)})`;
+    });
+  }
+  // Category rows for a set of days: days with any SKU in the category out,
+  // and the SKUs that were out at some point.
+  function oosByCatRange(ad, dayList){
+    const g = {};
+    dayList.forEach(d => { const od = ad.oosDay[d]; if (!od) return;
+      od.items.forEach(it => { const e = g[catOfA(it.asin)] = g[catOfA(it.asin)] || { days:new Set(), asins:new Set(), all:false };
+        e.days.add(d); e.asins.add(it.asin); if (it.k === 'all') e.all = true; }); });
+    return CAT_ORDER.filter(c => g[c]).map(c => ({ cat:c, days:g[c].days.size, asins:[...g[c].asins], all:g[c].all,
+      nums: sortNums([...g[c].asins].map(skuNum)) }));
   }
 
   function render(key){
@@ -25166,7 +25189,7 @@ window.addEventListener('load', async () => {
     else titleEl.textContent = `PB & Jay — All Products — ${metricLbl}`;
 
     let labels, datasets, note = '', bands = [];
-    const ad = annoData(asins), annos = { pins:[], oos:[] }, annoList = { listing:[], oos:[] };
+    const ad = annoData(asins, key === 'prod'), annos = { pins:[], oos:[] }, annoList = { listing:[], oos:[] };
     if (_trf.view === 'monthly'){
       const now = new Date(), cy = now.getFullYear(), stop = now.getMonth(); // months before the current one
       datasets = [];
@@ -25194,6 +25217,7 @@ window.addEventListener('load', async () => {
       Object.entries(ad.oosDay).forEach(([d, o]) => { const k = d.slice(0, 7); const e = oosMonth[k] = oosMonth[k] || { all:0, fba:0 }; e[o.kind]++; });
       Object.entries(oosMonth).forEach(([k, n]) => { const [y, m] = k.split('-').map(Number); if (hasData(y, m - 1)) annos.oos.push({ i:m - 1, kind: n.all ? 'all' : 'fba', counts:n, yr:y }); });
       annoList.oos = ad.oosRuns.filter(r => { const [y, m] = r.start.split('-').map(Number), [y1, m1] = r.end.split('-').map(Number); return hasData(y, m - 1) || hasData(y1, m1 - 1); });
+      annoList.days = Object.keys(ad.oosDay).filter(d => { const [y, m] = d.split('-').map(Number); return hasData(y, m - 1); });
       const { year, month } = lastFullMonth(), pm = prevMonth(year, month);
       const v = val(sum(_trf.br[ym(year, month)], asins), metric), vp = val(sum(_trf.br[ym(pm.year, pm.month)], asins), metric), vy = val(sum(_trf.br[ym(year - 1, month)], asins), metric);
       const ab = MONTHS[month - 1];
@@ -25222,7 +25246,8 @@ window.addEventListener('load', async () => {
         });
         // Daily: a pin on each listing-change day, a strip under each out-of-stock day
         ad.listing.forEach(c => { const i = days.indexOf(c.date); if (i >= 0){ annos.pins.push({ i, c }); annoList.listing.push(c); } });
-        days.forEach((d, i) => { const o = ad.oosDay[d]; if (o) annos.oos.push({ i, kind:o.kind, skus:o.skus }); });
+        days.forEach((d, i) => { const o = ad.oosDay[d]; if (o) annos.oos.push({ i, kind:o.kind, skus:o.skus, date:d }); });
+        annoList.days = days;
         annoList.oos = ad.oosRuns.filter(r => r.end >= days[0] && r.start <= days[days.length - 1]);
         if (hasLy) datasets.push({ label:'Same days last year', data:ly, borderColor:c1.border, backgroundColor:'transparent', fill:false, pointRadius:0, tension:0.25, borderWidth:2, spanGaps:false });
         const pool = arr => { let s = 0, u = 0, n = 0; arr.forEach(d => { const t = sum(byDate[d], asins); if (t){ s += t.s; u += t.u; n++; } }); return n ? { s, u, n } : null; };
@@ -25253,6 +25278,17 @@ window.addEventListener('load', async () => {
       const out = bands.filter(b => i >= b.i0 && i <= b.i1).map(b => `🛒 ${b.e.name}${evYr(b)}`);
       annos.pins.filter(pn => pn.i === i).forEach(pn => out.push(`✏️ Listing change${pn.yr ? ' ' + MONTHS[i] + ' ' + pn.yr : ''}: ${[...new Set(pn.c.items.map(x => x.field))].join(', ')}${ad.multi ? ' (' + listSkus([...new Set(pn.c.items.map(x => x.sku))]) + ')' : ''}`));
       annos.oos.filter(o => o.i === i).forEach(o => {
+        if (key === 'overall'){
+          if (o.counts){
+            const days = Object.keys(ad.oosDay).filter(d => d.startsWith(`${o.yr}-${String(i + 1).padStart(2, '0')}`));
+            const rows = oosByCatRange(ad, days);
+            if (rows.length) out.push(`⛔ Out of stock ${MONTHS[i]} ${o.yr}:`, ...rows.map(r => `   ${r.cat} (${r.days} day${r.days === 1 ? '' : 's'} • ${andList(r.nums)})`));
+          } else {
+            const od = ad.oosDay[o.date];
+            if (od){ out.push('⛔ Out of stock:'); oosByCatDay(od).forEach(s => out.push('   ' + s)); }
+          }
+          return;
+        }
         if (o.counts){ const parts = []; if (o.counts.all) parts.push(`${o.counts.all} day${o.counts.all === 1 ? '' : 's'} all inventory`); if (o.counts.fba) parts.push(`${o.counts.fba} day${o.counts.fba === 1 ? '' : 's'} FBA only`); out.push(`⛔ Out of stock ${MONTHS[i]} ${o.yr}: ${parts.join(', ')}${ad.multi ? ' (any product)' : ''}`); }
         else out.push(`⛔ Out of stock${ad.multi ? ` (${o.skus.length} product${o.skus.length === 1 ? '' : 's'}): ${listSkus(o.skus)}` : ' — ' + (o.kind === 'all' ? 'all inventory' : 'FBA only')}`);
       });
@@ -25280,13 +25316,25 @@ window.addEventListener('load', async () => {
       }).join('') : '';
       // Out of stock — one line per stretch
       const dayN = (a, b) => Math.round((new Date(b + 'T12:00:00Z') - new Date(a + 'T12:00:00Z')) / 86400000) + 1;
-      const oosHtml = annoList.oos.length ? `<div class="trf-media-hd" style="${gap(evHtml + chgHtml)}">Out of stock</div>` + annoList.oos.map(r => {
+      const runLine = r => {
+        const n = dayN(r.start, r.end);
+        const range = r.ongoing ? `${fmtD(r.start)} → today` : fmtRange(r.start, r.end);
+        return `<div class="trf-chg-row"><span class="trf-oos-swatch" style="background:${r.kind === 'all' ? TRF_ANNO.oosAll : TRF_ANNO.oosFba};margin-top:6px;"></span><span><b>${esc(r.sku)}</b>${r.name ? ' — ' + esc(r.name) : ''} · ${range} · ${r.kind === 'all' ? 'all inventory' : 'FBA only'} · ${n} day${n === 1 ? '' : 's'}${r.ongoing ? ' <span class="oos-pill ongoing" style="margin-left:4px;">Ongoing</span>' : ''}</span></div>`;
+      };
+      const oosHtml = !annoList.oos.length ? '' : key === 'overall'
+        ? `<div class="trf-media-hd" style="${gap(evHtml + chgHtml)}">Out of stock — by category</div>` + oosByCatRange(ad, annoList.days || []).map(row => {
+            const still = sortNums(row.asins.filter(a => annoList.oos.some(r => r.asin === a && r.ongoing)).map(skuNum));
+            const runs = annoList.oos.filter(r => row.asins.includes(r.asin));
+            return `<div class="trf-media-item"><span class="trf-oos-swatch" style="background:${row.all ? TRF_ANNO.oosAll : TRF_ANNO.oosFba};"></span><div style="flex:1;min-width:0;"><b>${esc(row.cat)}</b> (${row.days} day${row.days === 1 ? '' : 's'} • ${esc(andList(row.nums))})${still.length ? ` <span class="oos-pill ongoing" style="margin-left:4px;">Still out: ${esc(andList(still))}</span>` : ''}<details class="trf-chg"><summary>Dates by SKU</summary>${runs.map(runLine).join('')}</details></div></div>`;
+          }).join('')
+        : `<div class="trf-media-hd" style="${gap(evHtml + chgHtml)}">Out of stock</div>` + annoList.oos.map(r => {
         const n = dayN(r.start, r.end);
         const range = r.ongoing ? `${fmtD(r.start)} → today` : fmtRange(r.start, r.end);
         const what = r.kind === 'all' ? 'Out of stock — all inventory' : 'FBA out of stock (other inventory still on hand)';
         return `<div class="trf-media-item"><span class="trf-oos-swatch" style="background:${r.kind === 'all' ? TRF_ANNO.oosAll : TRF_ANNO.oosFba};"></span><span><b>${range}</b> · ${ad.multi ? esc(r.sku) + (r.name ? ' — ' + esc(r.name) : '') + ' · ' : ''}${what} · ${n} day${n === 1 ? '' : 's'}${r.ongoing ? ' <span class="oos-pill ongoing" style="margin-left:4px;">Ongoing</span>' : ''}</span></div>`;
-      }).join('') : '';
-      const warn = (_trf.logsLoaded && (!_trf.logsLoaded.oos || !_trf.logsLoaded.chg)) ? `<div class="trf-media-hd" style="text-transform:none;font-weight:500;${gap(evHtml + chgHtml + oosHtml)}">${!_trf.logsLoaded.oos ? 'The out-of-stock log' : 'The listing change log'}${(!_trf.logsLoaded.oos && !_trf.logsLoaded.chg) ? ' and the listing change log' : ''} couldn't load — the sheet needs link sharing (view).</div>` : '';
+      }).join('');
+      const chgBad = key === 'prod' && _trf.logsLoaded && !_trf.logsLoaded.chg;
+      const warn = (_trf.logsLoaded && (!_trf.logsLoaded.oos || chgBad)) ? `<div class="trf-media-hd" style="text-transform:none;font-weight:500;${gap(evHtml + chgHtml + oosHtml)}">${!_trf.logsLoaded.oos ? 'The out-of-stock log' : 'The listing change log'}${(!_trf.logsLoaded.oos && chgBad) ? ' and the listing change log' : ''} couldn't load — the sheet needs link sharing (view).</div>` : '';
       evEl.innerHTML = evHtml + chgHtml + oosHtml + warn;
     }
     renderLegend(_trf.charts[key], `trf-legend-${key}`);
