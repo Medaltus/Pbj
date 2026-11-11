@@ -1386,6 +1386,29 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
   .asn-grid{grid-template-columns:1fr;}
   .asn-meta-form-grid{grid-template-columns:1fr;}
 }
+
+/* Traffic (internal) — ported from the VBC dashboard 2026-11-11 */
+.trf-toolbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:16px;}
+.trf-seg{display:inline-flex;background:var(--bg);border:1px solid var(--border2);border-radius:999px;padding:3px;gap:2px;}
+.trf-seg button{border:0;background:transparent;border-radius:999px;padding:6px 14px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;font-family:inherit;}
+.trf-seg button.active{background:var(--navy);color:#fff;}
+.trf-seg-lg button{padding:8px 18px;font-size:12.5px;}
+.trf-source{font-size:11px;color:var(--muted);flex:1;min-width:220px;text-align:right;}
+.trf-card{margin-bottom:18px;}
+.trf-card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:12px;}
+.trf-card-ctrls{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.trf-note{font-size:12px;color:var(--muted);}
+.trf-cat-tabs{display:flex;gap:8px;flex-wrap:wrap;}
+.trf-cat-tab{background:var(--bg);border:1px solid var(--border2);border-radius:999px;padding:8px 18px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .13s;font-family:inherit;}
+.trf-cat-tab:hover{border-color:var(--navy);}
+.trf-cat-tab.active{background:var(--navy);border-color:var(--navy);color:#fff;}
+.trf-media{margin-top:12px;display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--navy);}
+.trf-media:empty{display:none;}
+.trf-media-item{display:flex;gap:8px;align-items:flex-start;line-height:1.45;}
+.trf-ev-swatch{flex:0 0 18px;height:12px;border-radius:3px;margin-top:3px;}
+.trf-media-hd{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+.trf-select{font-family:inherit;font-size:13px;padding:8px 12px;border:1px solid var(--border2);border-radius:8px;min-width:320px;max-width:100%;color:var(--navy);background:#fff;}
+@media (max-width:640px){ .trf-source{text-align:left;} .trf-select{min-width:0;width:100%;} }
 </style>
 <link rel="icon" type="image/png" href="PBJ_favicon.png">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -1451,6 +1474,9 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
     </button>
     <button class="nav-btn" onclick="showPage('events',this)">
       <svg viewBox="0 0 16 16"><rect x="1" y="3" width="14" height="12" rx="1.2"/><path d="M1 7h14M5 1v4M11 1v4"/></svg>Events
+    </button>
+    <button class="nav-btn" onclick="showPage('traffic',this)">
+      <svg viewBox="0 0 16 16"><path d="M1.5 14.5h13"/><path d="M2.5 11l3.5-4 3 2.5 4.5-6"/></svg>Traffic
     </button>
 
     <div class="nav-section">Opportunities (Internal)</div>
@@ -1737,8 +1763,16 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
          window.initProjections(). -->
     <div class="channel-page" id="ov-projections">
       <div class="card">
-        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:4px;">
-          <div class="card-title" style="margin-bottom:0;">Share of Sales</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:4px;">
+          <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+            <div class="card-title" id="proj-ads-title" style="margin-bottom:0;">Share of Sales</div>
+            <!-- View toggle — added 2026-11-11 per Jaclyn, same as MiGuard's -->
+            <div class="period-pills" id="proj-ads-pills" style="display:flex;background:var(--white);border:1px solid var(--border);border-radius:999px;padding:4px;gap:2px;">
+              <button class="period-pill active" data-view="share" onclick="window._projAdsView && window._projAdsView('share')">Share of Sales</button>
+              <button class="period-pill" data-view="organic" onclick="window._projAdsView && window._projAdsView('organic')">Organic Sales</button>
+              <button class="period-pill" data-view="ad" onclick="window._projAdsView && window._projAdsView('ad')">Ad Sales</button>
+            </div>
+          </div>
           <div id="legend-proj-ads" style="display:flex;align-items:center;"></div>
         </div>
         <div style="height:10px;"></div>
@@ -4260,6 +4294,54 @@ details.inci-toggle[open] summary::before{content:'▾ ';}
 
   </div>
 
+  <!-- ══ TRAFFIC (internal only) — added 2026-11-11 per Jaclyn, ported from
+       the VB Cosmetics dashboard's Traffic page. Rendered by loadPbjTraffic(). ══ -->
+  <div class="page" id="page-traffic">
+    <div class="page-hd"><div><div class="page-title">Traffic</div><div class="page-sub">Sessions · Conversion rate · Units — overall, by category and by product</div></div></div>
+    <div class="trf-toolbar">
+      <div class="trf-seg trf-seg-lg" id="trf-view"><button data-view="daily" onclick="pbjTrfSetView('daily')">Daily</button><button data-view="monthly" onclick="pbjTrfSetView('monthly')">Monthly</button></div>
+      <div class="trf-seg" id="trf-window"><button data-days="7" onclick="pbjTrfSetWindow(7)">7 days</button><button data-days="30" onclick="pbjTrfSetWindow(30)">30 days</button><button data-days="60" onclick="pbjTrfSetWindow(60)">60 days</button><button data-days="90" onclick="pbjTrfSetWindow(90)">90 days</button><button data-days="120" onclick="pbjTrfSetWindow(120)">120 days</button></div>
+      <div class="trf-source" id="trf-source"></div>
+    </div>
+    <div class="card trf-card">
+      <div class="trf-card-hd">
+        <div><div class="card-title" style="margin-bottom:2px;" id="trf-overall-title">PB &amp; Jay — All Products</div><div class="trf-note" id="trf-overall-note">Loading…</div></div>
+        <div class="trf-card-ctrls">
+          <div class="trf-seg" id="trf-overall-metric"><button class="active" data-metric="sessions" onclick="pbjTrfSetMetric('overall','sessions')">Sessions</button><button data-metric="conv" onclick="pbjTrfSetMetric('overall','conv')">Conv Rate</button><button data-metric="units" onclick="pbjTrfSetMetric('overall','units')">Units</button></div>
+          <div id="trf-legend-overall" style="display:flex;align-items:center;"></div>
+        </div>
+      </div>
+      <div style="position:relative;height:300px;"><canvas id="trf-overall-chart"></canvas></div>
+      <div class="trf-media" id="trf-overall-media"></div>
+    </div>
+    <div class="card trf-card">
+      <div class="trf-card-hd">
+        <div><div class="card-title" style="margin-bottom:2px;" id="trf-cat-title">By Category</div><div class="trf-note" id="trf-cat-note">Loading…</div></div>
+        <div class="trf-card-ctrls">
+          <div class="trf-seg" id="trf-cat-metric"><button class="active" data-metric="sessions" onclick="pbjTrfSetMetric('cat','sessions')">Sessions</button><button data-metric="conv" onclick="pbjTrfSetMetric('cat','conv')">Conv Rate</button><button data-metric="units" onclick="pbjTrfSetMetric('cat','units')">Units</button></div>
+          <div id="trf-legend-cat" style="display:flex;align-items:center;"></div>
+        </div>
+      </div>
+      <div class="trf-cat-tabs" id="trf-cat-tabs" style="margin:10px 0 14px;"></div>
+      <div style="position:relative;height:300px;"><canvas id="trf-cat-chart"></canvas></div>
+      <div class="trf-media" id="trf-cat-media"></div>
+    </div>
+    <div class="card trf-card">
+      <div class="trf-card-hd">
+        <div><div class="card-title" style="margin-bottom:2px;" id="trf-prod-title">By Product</div><div class="trf-note" id="trf-prod-note">Loading…</div></div>
+        <div class="trf-card-ctrls">
+          <div class="trf-seg" id="trf-prod-metric"><button class="active" data-metric="sessions" onclick="pbjTrfSetMetric('prod','sessions')">Sessions</button><button data-metric="conv" onclick="pbjTrfSetMetric('prod','conv')">Conv Rate</button><button data-metric="units" onclick="pbjTrfSetMetric('prod','units')">Units</button></div>
+          <div id="trf-legend-prod" style="display:flex;align-items:center;"></div>
+        </div>
+      </div>
+      <div style="margin:10px 0 14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select id="trf-prod-select" class="trf-select" onchange="pbjTrfSetProduct(this.value)"><option>Loading…</option></select>
+      </div>
+      <div style="position:relative;height:300px;"><canvas id="trf-prod-chart"></canvas></div>
+      <div class="trf-media" id="trf-prod-media"></div>
+    </div>
+  </div>
+
   <!-- ══ LISTING AUDIT (internal only) ══ -->
   <div class="page" id="page-listing">
     <div class="sheet-link-menu">
@@ -5500,7 +5582,7 @@ const pageTitles = {
   home:'Home — PB & Jay',
   overview:'Overview — PB & Jay',sales:'Sales — PB & Jay','sales-external':'Sales — PB & Jay',marketing:'Marketing — PB & Jay','marketing-external':'Marketing — PB & Jay',
   events:'Events — PB & Jay',inventory:'Inventory — PB & Jay','inventory-external':'Inventory — PB & Jay',
-  insights:'Insights — PB & Jay',listing:'Listing Audit — PB & Jay',ppc:'PPC — PB & Jay',organic:'Organic — PB & Jay'
+  insights:'Insights — PB & Jay',traffic:'Traffic — PB & Jay',listing:'Listing Audit — PB & Jay',ppc:'PPC — PB & Jay',organic:'Organic — PB & Jay'
 };
 
 function showPage(id, btn) {
@@ -5512,6 +5594,7 @@ function showPage(id, btn) {
 
   if (id === 'overview' && !window._overviewLiveInit && typeof window.initOverviewLive === 'function') window.initOverviewLive();
   if (id === 'events' && typeof window.initEventStrategyHeader === 'function') window.initEventStrategyHeader();
+  if (id === 'traffic' && typeof window.loadPbjTraffic === 'function') window.loadPbjTraffic();
   // Fastest Path to Page 1 lives on the default "Insights" sub-tab of
   // each category, shown immediately on navigating here — load the
   // shared keyword tracker data now rather than waiting for someone to
@@ -15415,38 +15498,108 @@ window.initProjections = function () {
         }
         return { label: `${MONTHS[dt.getMonth()]} '${String(dt.getFullYear()).slice(2)}`, ym, pct, orgPct, adSales, total };
       });
-      const canvas = document.getElementById('proj-ads-pct-chart');
-      if (canvas && typeof Chart === 'function') {
+      // ── Share of Sales / Organic Sales / Ad Sales toggle (2026-11-02 per Jaclyn) ──
+      // Share of Sales = the original 12-month Ad % vs Organic % chart.
+      // Organic Sales / Ad Sales = monthly $, Jan–Dec on the x-axis, one line
+      // per year for every year with data (same layout + colors as the Sales
+      // page chart: current year green/filled, then navy, sand, grey).
+      // Same sources and rules as Share of Sales: ad $ = Stewardship Summary
+      // ad_sales, organic $ = Amazon order total − ad $. Full months only (the
+      // month in progress is left off, like the Sales page); a month with no
+      // ad_sales value is a gap on both views, never a 0.
+      const PROJ_YEAR_COLORS = [
+        { border: '#24e9a3', bg: 'rgba(36,233,163,0.08)', fill: true },
+        { border: '#001f60', bg: 'transparent', fill: false },
+        { border: '#f4dfd0', bg: 'transparent', fill: false },
+        { border: '#ccd3d5', bg: 'transparent', fill: false },
+      ];
+      const PROJ_VIEW_TITLES = { share: 'Share of Sales', organic: 'Organic Sales', ad: 'Ad Sales' };
+      const lastFullYm = ymOf(lastFull);
+      function renderProjAdsChart(view) {
+        const canvas = document.getElementById('proj-ads-pct-chart');
+        if (!canvas || typeof Chart !== 'function') return;
         if (window._projAdsPctChart) window._projAdsPctChart.destroy();
-        const fmt$ = v => '$' + Math.round(v || 0).toLocaleString();
+        const titleEl = document.getElementById('proj-ads-title');
+        if (titleEl) titleEl.textContent = PROJ_VIEW_TITLES[view];
+        document.querySelectorAll('#proj-ads-pills .period-pill').forEach(btn => btn.classList.toggle('active', btn.dataset.view === view));
+        const noteEl = document.getElementById('proj-ads-note');
+
+        if (view === 'share') {
+        {
+          const fmt$ = v => '$' + Math.round(v || 0).toLocaleString();
+          window._projAdsPctChart = new Chart(canvas, {
+            type: 'line',
+            data: { labels: pts.map(p => p.label), datasets: [
+              { label: 'Ad sales %', data: pts.map(p => p.pct), borderColor: '#24e9a3', backgroundColor: 'rgba(36,233,163,0.08)', fill: true, pointRadius: 3, tension: 0.3, borderWidth: 2.5, spanGaps: false },
+              { label: 'Organic sales %', data: pts.map(p => p.orgPct), borderColor: '#001f60', backgroundColor: 'transparent', fill: false, pointRadius: 3, tension: 0.3, borderWidth: 2.5, spanGaps: false },
+            ] },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              interaction: { mode: 'index', intersect: false },
+              plugins: {
+                legend: { display: false }, // external legend in #legend-proj-ads
+                tooltip: { callbacks: { label: ctx => {
+                  const p = pts[ctx.dataIndex];
+                  if (ctx.datasetIndex === 0) return ` Ad: ${p.pct}% (${fmt$(p.adSales)})`;
+                  return ` Organic: ${p.orgPct}% (${fmt$(Math.max(0, p.total - p.adSales))} of ${fmt$(p.total)})`;
+                } } },
+              },
+              scales: {
+                x: { grid: { color: 'rgba(0,0,0,0.04)' } },
+                y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { callback: v => v + '%' } },
+              },
+            },
+          });
+          if (typeof window.renderExternalLegend === 'function') window.renderExternalLegend(window._projAdsPctChart, 'legend-proj-ads');
+        }
+        const gaps = pts.filter(p => p.pct == null).map(p => p.label);
+        if (noteEl) noteEl.textContent = 'ℹ Ad sales from the Stewardship Summary sheet (ad_sales, column O); total sales from Amazon orders, same as the table below.' + (gaps.length ? ' No ad_sales value yet for: ' + gaps.join(', ') + ' — those months are left blank.' : '');
+          return;
+        }
+
+        // Organic Sales / Ad Sales — one line per year.
+        const byYear = {};
+        Object.keys(adByMonth).forEach(ym => {
+          if (ym > lastFullYm) return;
+          const total = monthTotal[ym], ad = adByMonth[ym];
+          let v;
+          if (view === 'ad') v = ad;
+          else { if (!(total > 0)) return; v = Math.max(0, total - ad); }
+          const y = parseInt(ym.substring(0, 4), 10), m = parseInt(ym.substring(5, 7), 10);
+          (byYear[y] = byYear[y] || Array(12).fill(null))[m - 1] = v;
+        });
+        const years = Object.keys(byYear).map(Number).sort((x, y) => y - x); // newest first
+        const fmtK = v => v == null ? '' : '$' + (v >= 1000 ? (v / 1000).toFixed(1) + 'k' : Math.round(v));
+        const fmtFull = v => '$' + Math.round(v || 0).toLocaleString();
+        const datasets = years.map((yr, i) => {
+          const c = PROJ_YEAR_COLORS[Math.min(i, PROJ_YEAR_COLORS.length - 1)];
+          return { label: String(yr), data: byYear[yr], borderColor: c.border, backgroundColor: c.bg, fill: c.fill, pointRadius: 2, tension: 0.3, borderWidth: 2.5, spanGaps: false };
+        });
         window._projAdsPctChart = new Chart(canvas, {
           type: 'line',
-          data: { labels: pts.map(p => p.label), datasets: [
-            { label: 'Ad sales %', data: pts.map(p => p.pct), borderColor: '#24e9a3', backgroundColor: 'rgba(36,233,163,0.08)', fill: true, pointRadius: 3, tension: 0.3, borderWidth: 2.5, spanGaps: false },
-            { label: 'Organic sales %', data: pts.map(p => p.orgPct), borderColor: '#001f60', backgroundColor: 'transparent', fill: false, pointRadius: 3, tension: 0.3, borderWidth: 2.5, spanGaps: false },
-          ] },
+          data: { labels: MONTHS, datasets },
           options: {
             responsive: true, maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
             plugins: {
-              legend: { display: false }, // external legend in #legend-proj-ads
-              tooltip: { callbacks: { label: ctx => {
-                const p = pts[ctx.dataIndex];
-                if (ctx.datasetIndex === 0) return ` Ad: ${p.pct}% (${fmt$(p.adSales)})`;
-                return ` Organic: ${p.orgPct}% (${fmt$(Math.max(0, p.total - p.adSales))} of ${fmt$(p.total)})`;
-              } } },
+              legend: { display: false },
+              tooltip: { callbacks: {
+                label: ctx => ctx.parsed.y == null ? null : ` ${ctx.dataset.label}: ${fmtFull(ctx.parsed.y)}`,
+              } },
             },
             scales: {
               x: { grid: { color: 'rgba(0,0,0,0.04)' } },
-              y: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { callback: v => v + '%' } },
+              y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.04)' }, ticks: { callback: fmtK } },
             },
           },
         });
         if (typeof window.renderExternalLegend === 'function') window.renderExternalLegend(window._projAdsPctChart, 'legend-proj-ads');
+        if (noteEl) noteEl.textContent = view === 'ad'
+          ? 'ℹ Monthly ad sales from the Stewardship Summary sheet (ad_sales, column O), full months only. Months with no ad_sales value are left blank.'
+          : 'ℹ Monthly organic sales = Amazon order total (same as the table below) − ad sales from the Stewardship Summary sheet, full months only. Months with no ad_sales value are left blank.';
       }
-      const gaps = pts.filter(p => p.pct == null).map(p => p.label);
-      const noteEl = document.getElementById('proj-ads-note');
-      if (noteEl) noteEl.textContent = 'ℹ Ad sales from the Stewardship Summary sheet (ad_sales, column O); total sales from Amazon orders, same as the table below.' + (gaps.length ? ' No ad_sales value yet for: ' + gaps.join(', ') + ' — those months are left blank.' : '');
+      window._projAdsView = renderProjAdsChart;
+      renderProjAdsChart('share');
 
       // ── 2) Sales by Quarter ──
       // Inventory Available = latest Products Cache snapshot, same formula as the Inventory page.
@@ -24693,6 +24846,321 @@ window.addEventListener('load', async () => {
     console.warn('[Clerk] Auth check failed, internal section stays hidden:', err);
   }
 });
+</script>
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// TRAFFIC (internal) — added 2026-11-11 per Jaclyn, ported from the
+// VB Cosmetics dashboard's Traffic page (vbc-index_48.html, DD Traffic).
+// Three charts, each with a Sessions / Conv Rate / Units toggle:
+//   1) Overall — every PB & Jay ASIN in the daily business report
+//   2) By Category — pills: Makeup Wipes / Face Masks / Hydrogel Mask / Blemish Patches
+//   3) By Product — dropdown grouped by category
+// Source: Daily Business Report workbook, "pbj" tab (DATE, ASIN, SKU,
+// SESSIONS, UNITS_ORDERED, …). Daily view = the last 7–120 days, with the
+// same calendar days a year earlier as a second line once that history
+// exists; the newest days are dashed because Amazon keeps adjusting them
+// for a few days. Monthly view = Jan–Dec, one line per year, built from the
+// same daily rows (current year runs through the last full month).
+// Conversion is always units ÷ sessions for the group, never an average of
+// per-product rates. Categories come from the Master SKU List (col K).
+// Amazon events (Events tab) are shaded on the charts, like VBC's.
+// Not ported from VBC (no PB & Jay source for them): media mentions,
+// out-of-stock stretches and listing-change pins.
+// ═══════════════════════════════════════════════════════════════════
+(function () {
+  const PBJ_DAILY_BR_CSV = 'https://docs.google.com/spreadsheets/d/1QLjUvYg-JR6jQmdFlykypkNarqsZvTCOgA3bFagDlVg/export?format=csv&gid=845410408';
+  const PBJ_EVENTS_CSV   = 'https://docs.google.com/spreadsheets/d/1NNRTRQxQl2r4XivAvH700CC39p49GD2xfZlyRNqahGA/export?format=csv&gid=347530381';
+  const TRF_EVENT_COLOR = '#FF9900';
+  const TRF_FINAL_AFTER = 4; // days before a day's numbers stop moving
+  const TRF_CATS = [['Makeup Wipes','Makeup Wipes'],['Face Masks','Face Masks'],['Hydrogel Mask','Hydrogel Mask'],['Blemish Patches','Blemish Patches']];
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const YC = [
+    { border:'#24e9a3', bg:'rgba(36,233,163,0.08)', fill:true  },
+    { border:'#001f60', bg:'transparent',           fill:false },
+    { border:'#f4dfd0', bg:'transparent',           fill:false },
+    { border:'#ccd3d5', bg:'transparent',           fill:false },
+  ];
+  const _trf = window._pbjTrf = { loading:null, daily:null, view:null, win:30, cat:'Blemish Patches', asin:null,
+    metric:{ overall:'sessions', cat:'sessions', prod:'sessions' }, charts:{} };
+
+  const esc = s => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const num = v => parseFloat(String(v == null ? '' : v).replace(/[^0-9.-]/g,'')) || 0;
+  const ym = (y,m) => `${y}-${String(m).padStart(2,'0')}`;
+  function normDate(d){
+    d = String(d || '').trim();
+    let m = d.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if (m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    m = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+    return m ? `${m[3]}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}` : '';
+  }
+  function addDays(iso, n){ const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0,10); }
+  function shiftYear(iso, n){
+    const [y,m,d] = iso.split('-').map(Number), yy = y + n;
+    const last = new Date(Date.UTC(yy, m, 0)).getUTCDate();
+    return `${yy}-${String(m).padStart(2,'0')}-${String(Math.min(d, last)).padStart(2,'0')}`;
+  }
+  function todayPT(){ return new Intl.DateTimeFormat('en-CA', { timeZone:'America/Los_Angeles', year:'numeric', month:'2-digit', day:'2-digit' }).format(new Date()); }
+  function lastFullMonth(){ const d = new Date(); let y = d.getFullYear(), m = d.getMonth(); if (m === 0){ m = 12; y--; } return { year:y, month:m }; }
+  const prevMonth = (y,m) => m === 1 ? { year:y-1, month:12 } : { year:y, month:m-1 };
+  async function fetchRows(url){
+    const res = await fetch(url + (url.includes('?') ? '&' : '?') + '_cb=' + Date.now(), { cache:'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const text = await res.text();
+    if (text.trim().startsWith('<')) throw new Error('sheet did not return CSV — check it is link-shared (view)');
+    return window.parseCsvKeepCase(text);
+  }
+  function fmtRange(a, b){
+    const f = iso => { const [y,m,d] = iso.split('-').map(Number); return { s:`${MONTHS[m-1]} ${d}`, y }; };
+    const A = f(a), B = f(b);
+    return a === b ? `${A.s}, ${A.y}` : (A.y === B.y ? `${A.s} – ${B.s}, ${B.y}` : `${A.s}, ${A.y} – ${B.s}, ${B.y}`);
+  }
+
+  function load(){
+    if (_trf.loading) return _trf.loading;
+    _trf.loading = (async () => {
+      const skuCfg = (window.SHEET_CFG || {}).SHEET_MASTER_SKU_LIST || {};
+      const skuUrl = `https://docs.google.com/spreadsheets/d/${skuCfg.fileId}/export?format=csv&gid=${skuCfg.gid}`;
+      const soft = (u, what) => fetchRows(u).catch(e => { console.warn(`[PBJ][Traffic] ${what}:`, e.message); return []; });
+      const [dailyRows, skuRows, eventRows] = await Promise.all([ fetchRows(PBJ_DAILY_BR_CSV), soft(skuUrl, 'Master SKU List'), soft(PBJ_EVENTS_CSV, 'events') ]);
+      // Catalog from the Master SKU List: ASIN → { name, sku, cat }
+      const catOf = {}, nameOf = {}, skuOf = {}, byCat = {};
+      skuRows.forEach(r => {
+        const asin = (r['ASIN'] || '').trim().toUpperCase(), sku = (r['SKU'] || '').trim();
+        if (!asin || !window.isPbjBrand(r['Brand'] || 'pbj')) return;
+        if ((r['SKU Type'] || '').trim().toUpperCase() && (r['SKU Type'] || '').trim().toUpperCase() !== 'CATALOG') return;
+        const cat = (r['Product Category'] || '').replace(/\u00a0/g, ' ').replace(/^[A-Za-z0-9]+\s*[•\-–]\s*/, '').trim();
+        if (catOf[asin]) return;
+        catOf[asin] = cat; nameOf[asin] = (r['Product Short Name'] || '').trim() || sku; skuOf[asin] = sku;
+        (byCat[cat] = byCat[cat] || []).push(asin);
+      });
+      // Daily: date → asin → { s, u }
+      const daily = {};
+      dailyRows.forEach(r => {
+        const date = normDate(r.DATE), asin = (r.ASIN || '').trim().toUpperCase();
+        if (!date || !asin) return;
+        const e = ((daily[date] = daily[date] || {})[asin] = daily[date][asin] || { s:0, u:0 });
+        e.s += num(r.SESSIONS); e.u += num(r.UNITS_ORDERED);
+        if (!nameOf[asin]) { nameOf[asin] = (r.SKU || asin).trim(); skuOf[asin] = (r.SKU || '').trim(); }
+      });
+      const dates = Object.keys(daily).sort();
+      // Monthly from the daily rows: "YYYY-MM" → asin → { s, u }
+      const br = {};
+      dates.forEach(d => {
+        const k = d.slice(0,7);
+        Object.entries(daily[d]).forEach(([a, v]) => { const e = ((br[k] = br[k] || {})[a] = br[k][a] || { s:0, u:0 }); e.s += v.s; e.u += v.u; });
+      });
+      const col = (r, ...names) => { const k = Object.keys(r).find(h => names.some(n => h.trim().toLowerCase() === n)); return k ? String(r[k] || '').trim() : ''; };
+      _trf.events = eventRows.map(r => {
+        const start = normDate(col(r, 'start_date', 'start date', 'start')), end0 = normDate(col(r, 'end_date', 'end date', 'end')) || start;
+        return { name: col(r, 'event name', 'event'), start, end: end0 < start ? start : end0 };
+      }).filter(e => e.name && e.start).sort((a, b) => a.start.localeCompare(b.start));
+      Object.assign(_trf, { daily:{ byDate:daily, dates }, br, catOf, nameOf, skuOf, byCat });
+      return _trf;
+    })();
+    _trf.loading.catch(() => { _trf.loading = null; });
+    return _trf.loading;
+  }
+
+  window.loadPbjTraffic = async function () {
+    try { await load(); }
+    catch (err) {
+      ['overall','cat','prod'].forEach(k => { const n = document.getElementById(`trf-${k}-note`); if (n) n.textContent = 'Error loading traffic data: ' + err.message; });
+      return;
+    }
+    if (!_trf.view) _trf.view = _trf.daily.dates.length >= 7 ? 'daily' : 'monthly';
+    if (!_trf.asin) _trf.asin = defaultProduct();
+    renderControls();
+    renderAll();
+  };
+
+  function defaultProduct(){
+    const { year, month } = lastFullMonth(), cur = _trf.br[ym(year, month)] || {};
+    let best = null, bestS = -1;
+    Object.keys(_trf.catOf).forEach(a => { const s = (cur[a] || {}).s || 0; if (s > bestS){ bestS = s; best = a; } });
+    return best;
+  }
+  function renderControls(){
+    if (!_trf.daily) return;
+    document.querySelectorAll('#trf-view button').forEach(b => b.classList.toggle('active', b.dataset.view === _trf.view));
+    const win = document.getElementById('trf-window');
+    win.style.display = _trf.view === 'daily' ? '' : 'none';
+    win.querySelectorAll('button').forEach(b => b.classList.toggle('active', Number(b.dataset.days) === _trf.win));
+    const dd = _trf.daily.dates;
+    document.getElementById('trf-source').textContent = _trf.view === 'daily'
+      ? (dd.length ? `Daily Business Report (Amazon) · ${dd.length} day${dd.length === 1 ? '' : 's'} available (${dd[0]} → ${dd[dd.length-1]}) · dashed = still settling` : 'Daily: no data in the Daily Business Report yet.')
+      : `Monthly totals of the Daily Business Report (Amazon) · history starts ${dd[0] || '—'} · current year runs through the last full month`;
+    ['overall','cat','prod'].forEach(k => document.querySelectorAll(`#trf-${k}-metric button`).forEach(b => b.classList.toggle('active', b.dataset.metric === _trf.metric[k])));
+    document.getElementById('trf-cat-tabs').innerHTML = TRF_CATS.filter(([k]) => (_trf.byCat[k] || []).length)
+      .map(([k, l]) => `<button class="trf-cat-tab${_trf.cat === k ? ' active' : ''}" onclick="pbjTrfSetCat('${k}')">${esc(l)}</button>`).join('');
+    const { year, month } = lastFullMonth(), cur = _trf.br[ym(year, month)] || {};
+    const sel = document.getElementById('trf-prod-select');
+    sel.innerHTML = TRF_CATS.map(([k, l]) => {
+      const list = (_trf.byCat[k] || []).slice().sort((a, b) => ((cur[b] || {}).s || 0) - ((cur[a] || {}).s || 0));
+      return list.length ? `<optgroup label="${esc(l)}">${list.map(a => `<option value="${a}"${a === _trf.asin ? ' selected' : ''}>${esc(_trf.nameOf[a])} · ${esc(_trf.skuOf[a])}</option>`).join('')}</optgroup>` : '';
+    }).join('');
+  }
+  window.pbjTrfSetView    = v => { _trf.view = v; renderControls(); renderAll(); };
+  window.pbjTrfSetWindow  = n => { _trf.win = n; renderControls(); renderAll(); };
+  window.pbjTrfSetMetric  = (k, m) => { _trf.metric[k] = m; renderControls(); render(k); };
+  window.pbjTrfSetCat     = k => { _trf.cat = k; renderControls(); render('cat'); };
+  window.pbjTrfSetProduct = a => { _trf.asin = a; render('prod'); };
+  function renderAll(){ ['overall','cat','prod'].forEach(render); }
+
+  function asinSet(key){
+    if (key === 'overall') return null;
+    if (key === 'cat') return new Set(_trf.byCat[_trf.cat] || []);
+    return new Set(_trf.asin ? [_trf.asin] : []);
+  }
+  function sum(obj, asins){
+    if (!obj) return null;
+    let s = 0, u = 0;
+    if (asins) asins.forEach(a => { const r = obj[a]; if (r){ s += r.s; u += r.u; } });
+    else Object.values(obj).forEach(r => { s += r.s; u += r.u; });
+    return { s, u };
+  }
+  const val = (t, metric) => !t ? null : metric === 'sessions' ? t.s : metric === 'units' ? t.u : (t.s ? t.u / t.s * 100 : null);
+  const METRIC_LABEL = { sessions:'Sessions', conv:'Conv Rate', units:'Units' };
+  const fmtNum = v => v == null ? '' : Math.abs(v) >= 1000000 ? (v/1000000).toFixed(1).replace(/\.0$/,'') + 'M' : Math.abs(v) >= 1000 ? (v/1000).toFixed(v >= 10000 ? 0 : 1).replace(/\.0$/,'') + 'k' : Math.round(v).toLocaleString();
+  const fmtPct = v => v == null ? '' : v.toFixed(1) + '%';
+  function pctChg(a, b, metric){
+    if (a == null || b == null || !b) return '';
+    if (metric === 'conv'){ const d = a - b; return `<b style="color:${d>0?'#1db88a':d<0?'#db372d':'var(--muted)'};">${d>0?'▲ +':d<0?'▼ ':''}${d.toFixed(1)} pts</b>`; }
+    const v = Math.round((a - b) / b * 100); return `<b style="color:${v>0?'#1db88a':v<0?'#db372d':'var(--muted)'};">${v>0?'▲ +':v<0?'▼ ':''}${v}%</b>`;
+  }
+  function chartOptions(fmt){
+    return {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{
+        legend:{ display:false },
+        tooltip:{ backgroundColor:'#fff', borderColor:'rgba(0,31,96,0.1)', borderWidth:1, titleColor:'#001F60', bodyColor:'#6B7BA2',
+          titleFont:{ family:'DM Sans, sans-serif', size:11, weight:'600' }, bodyFont:{ family:'DM Sans, sans-serif', size:11 },
+          padding:12, boxWidth:8, boxHeight:8, callbacks:{ label: ctx => ctx.parsed.y == null ? null : ` ${ctx.dataset.label}: ${fmt(ctx.parsed.y)}` } },
+      },
+      scales:{
+        x:{ border:{ display:false }, grid:{ display:false }, ticks:{ font:{ family:'DM Sans, sans-serif', size:10 }, color:'#6B7BA2', autoSkip:true, maxTicksLimit:12 } },
+        y:{ border:{ display:false }, grid:{ color:'rgba(0,31,96,0.05)' }, ticks:{ font:{ family:'DM Sans, sans-serif', size:10 }, color:'#6B7BA2', callback:fmt } },
+      },
+      interaction:{ mode:'index', intersect:false },
+    };
+  }
+  function renderLegend(chart, id){
+    const el = document.getElementById(id);
+    if (!el || !chart) return;
+    el.innerHTML = chart.data.datasets.map(ds => '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:16px;font-size:13px;font-weight:600;color:var(--navy);white-space:nowrap;">' +
+      '<span style="width:16px;height:3px;border-radius:2px;background:' + ds.borderColor + ';display:inline-block;flex-shrink:0;"></span>' + esc(ds.label) + '</span>').join('');
+  }
+  // Shaded bands for Amazon events (same look as VBC's Traffic charts)
+  const TRF_BANDS_PLUGIN = {
+    id:'pbjTrfBands',
+    beforeDatasetsDraw(chart, _args, opts){
+      const bands = (opts && opts.bands) || [];
+      if (!bands.length) return;
+      const { ctx, chartArea:{ top, bottom, left, right }, scales:{ x } } = chart;
+      const step = x.getPixelForValue(1) - x.getPixelForValue(0) || 0;
+      bands.forEach(b => {
+        const x0 = Math.max(left, x.getPixelForValue(b.i0) - step/2), x1 = Math.min(right, x.getPixelForValue(b.i1) + step/2);
+        ctx.save();
+        ctx.globalAlpha = b.ly ? 0.08 : 0.16; ctx.fillStyle = TRF_EVENT_COLOR; ctx.fillRect(x0, top, Math.max(2, x1 - x0), bottom - top);
+        if (b.ly){ ctx.globalAlpha = 0.5; ctx.strokeStyle = TRF_EVENT_COLOR; ctx.setLineDash([3,3]); ctx.lineWidth = 1; ctx.strokeRect(x0, top, Math.max(2, x1 - x0), bottom - top); }
+        ctx.restore();
+      });
+    },
+  };
+
+  function render(key){
+    if (!_trf.daily) return;
+    const metric = _trf.metric[key], asins = asinSet(key);
+    const fmt = metric === 'conv' ? fmtPct : fmtNum;
+    const metricLbl = METRIC_LABEL[metric];
+    const fmtBig = v => metric === 'conv' ? fmt(v) : Math.round(v).toLocaleString() + (metric === 'units' ? ' units' : ' sessions');
+    const titleEl = document.getElementById(`trf-${key}-title`), noteEl = document.getElementById(`trf-${key}-note`);
+    if (key === 'cat') titleEl.textContent = `${_trf.cat} — ${metricLbl}`;
+    else if (key === 'prod') titleEl.textContent = `${_trf.nameOf[_trf.asin] || 'Product'} — ${metricLbl}`;
+    else titleEl.textContent = `PB & Jay — All Products — ${metricLbl}`;
+
+    let labels, datasets, note = '', bands = [];
+    if (_trf.view === 'monthly'){
+      const now = new Date(), cy = now.getFullYear(), stop = now.getMonth(); // months before the current one
+      datasets = [];
+      for (let off = 0; off <= 3; off++){
+        const yr = cy - off, c = YC[off];
+        const arr = MONTHS.map((_, i) => { if (yr === cy && i + 1 > stop) return null; const t = sum(_trf.br[ym(yr, i + 1)], asins); return t && t.s ? val(t, metric) : null; });
+        if (arr.every(v => v == null)) continue;
+        datasets.push({ label:String(yr), data:arr, borderColor:c.border, backgroundColor:c.bg, fill:c.fill, pointRadius:2, tension:0.3, borderWidth:2.5, spanGaps:false });
+      }
+      labels = MONTHS;
+      (_trf.events || []).forEach(e => {
+        const [y, m0] = e.start.split('-').map(Number), [y1, m1] = e.end.split('-').map(Number);
+        const ds = datasets.find(x => x.label === String(y));
+        if (!ds) return;
+        const i0 = m0 - 1, i1 = y1 === y ? m1 - 1 : 11;
+        if (ds.data.slice(i0, i1 + 1).every(v => v == null)) return;
+        bands.push({ i0, i1, e, ly: y !== cy, yr: y });
+      });
+      const { year, month } = lastFullMonth(), pm = prevMonth(year, month);
+      const v = val(sum(_trf.br[ym(year, month)], asins), metric), vp = val(sum(_trf.br[ym(pm.year, pm.month)], asins), metric), vy = val(sum(_trf.br[ym(year - 1, month)], asins), metric);
+      const ab = MONTHS[month - 1];
+      if (v != null) note = [`${ab} ${year}: <b>${fmtBig(v)}</b>`, vp != null ? `${pctChg(v, vp, metric)} vs ${MONTHS[pm.month - 1]}` : '', vy != null ? `${pctChg(v, vy, metric)} vs ${ab} ${year - 1}` : ''].filter(Boolean).join(' &nbsp;·&nbsp; ');
+    } else {
+      const all = _trf.daily.dates, byDate = _trf.daily.byDate;
+      if (!all.length){ labels = []; datasets = []; note = 'No daily data yet — the Daily Business Report is still filling in.'; }
+      else {
+        const end = all[all.length - 1];
+        const start = [addDays(end, -(_trf.win - 1)), all[0]].sort()[1];
+        const days = []; for (let d = start; d <= end; d = addDays(d, 1)) days.push(d);
+        const cur = days.map(d => { const t = sum(byDate[d], asins); return t ? val(t, metric) : null; });
+        const ly  = days.map(d => { const t = sum(byDate[shiftYear(d, -1)], asins); return t ? val(t, metric) : null; });
+        const finalCut = addDays(todayPT(), -TRF_FINAL_AFTER);
+        const firstProv = days.findIndex(d => d > finalCut);
+        labels = days.map(d => { const [y, m, dd] = d.split('-').map(Number); return `${MONTHS[m - 1]} ${dd}` + (days.length > 120 ? ` '${String(y).slice(2)}` : ''); });
+        const c0 = YC[0], c1 = YC[1];
+        datasets = [{ label:'This year', data:cur, borderColor:c0.border, backgroundColor:c0.bg, fill:c0.fill, pointRadius:days.length > 60 ? 0 : days.length > 30 ? 1.5 : 2.5, tension:0.25, borderWidth:2.5, spanGaps:false,
+                      segment:{ borderDash: ctx => (firstProv >= 0 && ctx.p1DataIndex >= firstProv) ? [5,4] : undefined } }];
+        const hasLy = ly.some(v => v != null);
+        const span = (a, b) => { const i0 = days.findIndex(d => d >= a), last = days.length - 1 - [...days].reverse().findIndex(d => d <= b);
+          return (i0 < 0 || last >= days.length || last < i0) ? null : [i0, last]; };
+        (_trf.events || []).forEach(e => {
+          const t = span(e.start, e.end); if (t) bands.push({ i0:t[0], i1:t[1], e });
+          if (hasLy){ const l = span(shiftYear(e.start, 1), shiftYear(e.end, 1)); if (l) bands.push({ i0:l[0], i1:l[1], e, ly:true }); }
+        });
+        if (hasLy) datasets.push({ label:'Same days last year', data:ly, borderColor:c1.border, backgroundColor:'transparent', fill:false, pointRadius:0, tension:0.25, borderWidth:2, spanGaps:false });
+        const pool = arr => { let s = 0, u = 0, n = 0; arr.forEach(d => { const t = sum(byDate[d], asins); if (t){ s += t.s; u += t.u; n++; } }); return n ? { s, u, n } : null; };
+        const N = days.length;
+        const prevDays = []; for (let i = N; i >= 1; i--) prevDays.push(addDays(days[0], -i));
+        const lw = pool(days), pw = pool(prevDays);
+        const a = val(lw, metric), b = val(pw, metric);
+        const synced = lw ? lw.n : 0;
+        const short = synced < _trf.win ? ` <span style="color:var(--muted);">(${synced} of ${_trf.win} days available)</span>` : '';
+        if (a != null) note = [`Last ${N} days: <b>${fmtBig(a)}</b>${short}`, (b != null && pw.n === N) ? `${pctChg(a, b, metric)} vs the ${N} days before` : ''].filter(Boolean).join(' &nbsp;·&nbsp; ');
+        if (!datasets[0].data.some(v => v != null)) note = key === 'prod' ? 'No daily sessions for this product in this window.' : 'No daily data for this selection yet.';
+      }
+    }
+    if (!note) note = 'No data for this selection yet.';
+    noteEl.innerHTML = note;
+
+    const canvas = document.getElementById(`trf-${key}-chart`);
+    if (!canvas || typeof Chart === 'undefined') return;
+    const opts = chartOptions(fmt);
+    opts.scales.y.beginAtZero = metric !== 'conv';
+    opts.plugins.pbjTrfBands = { bands };
+    const evYr = b => b.yr ? ` ${b.yr}` : (b.ly ? ' (last year)' : '');
+    opts.plugins.tooltip.callbacks.footer = items => {
+      const i = items.length ? items[0].dataIndex : -1;
+      return bands.filter(b => i >= b.i0 && i <= b.i1).map(b => `🛒 ${b.e.name}${evYr(b)}`);
+    };
+    opts.plugins.tooltip.footerColor = '#001F60';
+    const ch = _trf.charts[key];
+    if (ch){ ch.data.labels = labels; ch.data.datasets = datasets; ch.options = opts; ch.update(); }
+    else _trf.charts[key] = new Chart(canvas, { type:'line', data:{ labels, datasets }, options:opts, plugins:[TRF_BANDS_PLUGIN] });
+    const evEl = document.getElementById(`trf-${key}-media`);
+    if (evEl){
+      const seen = new Set(), evs = bands.slice().sort((x, y) => x.i0 - y.i0 || (x.yr || 0) - (y.yr || 0)).filter(b => { const k = b.e.name + b.e.start + (b.ly ? 'L' : ''); if (seen.has(k)) return false; seen.add(k); return true; });
+      evEl.innerHTML = evs.length ? `<div class="trf-media-hd">Amazon events</div>` + evs.map(b => `<div class="trf-media-item"><span class="trf-ev-swatch" style="background:${TRF_EVENT_COLOR};opacity:${b.ly ? .45 : .8};"></span><span><b>${esc(b.e.name)}</b> · ${fmtRange(b.e.start, b.e.end)}${b.ly ? (b.yr ? ` <span style="color:var(--muted);">(on the ${b.yr} line)</span>` : ' <span style="color:var(--muted);">(last year, shown on the same dates)</span>') : ''}</span></div>`).join('') : '';
+    }
+    renderLegend(_trf.charts[key], `trf-legend-${key}`);
+  }
+})();
+
 </script>
 </body>
 </html>
